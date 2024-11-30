@@ -51,14 +51,11 @@ class EbayMonitor:
             offset = 0
             limit = 200
             
-            # Force "pokemon" to be in results by adding quotes
-            modified_keywords = '"pokemon" ' + keywords
+            # Use the keywords as provided
+            modified_keywords = keywords
             
             # Construct price filter based on provided values
             filter_parts = ['itemLocationCountry:GB']
-            
-            # Add creation date filter for last 7 days
-            filter_parts.append('creationDate:[' + 'P7D' + ']')
             
             # Add price filter if specified
             if filters and (filters.get('min_price') or filters.get('max_price')):
@@ -96,26 +93,26 @@ class EbayMonitor:
                 
                 results = response.json()
                 total_items = results.get('total', 0)
-                items_in_page = len(results.get('itemSummaries', []))
-                
                 print(f"Total items available: {total_items}")
-                print(f"Items in this page: {items_in_page}")
-                print(f"Current offset: {offset}")
-                print(f"Items collected so far: {len(all_items)}")
                 
                 if not results.get('itemSummaries'):
-                    print("No items in current page, stopping")
                     break
                     
-                all_items.extend(results['itemSummaries'])
+                # Post-process to filter items with either "pokemon" or "pokémon"
+                filtered_items = [
+                    item for item in results['itemSummaries']
+                    if 'pokemon' in item['title'].lower() or 'pokémon' in item['title'].lower()
+                ]
+                
+                print(f"Found {len(filtered_items)} relevant items in this page")
+                all_items.extend(filtered_items)
                 offset += limit
                 
-                # Stop if we've seen all available items
                 if offset >= total_items:
                     print(f"Reached end of available items ({total_items} total)")
-                    print(f"Final items collected: {len(all_items)}")
                     break
             
+            print(f"Total relevant items collected: {len(all_items)}")
             return {"itemSummaries": all_items}
         except Exception as e:
             print(f"Search error: {str(e)}")
