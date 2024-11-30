@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>eBay Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>eBay Item Monitor</h1>
+    
+    <div class="form-group">
+        <label for="search_term">Search Term:</label>
+        <input type="text" id="search_term" placeholder="iPhone 14 Pro">
+    </div>
+    
+    <div class="form-group">
+        <label for="check_interval">Check Interval (seconds):</label>
+        <input type="number" id="check_interval" value="20">
+    </div>
+    
+    <div class="form-group">
+        <label for="min_price">Minimum Price (£):</label>
+        <input type="number" id="min_price" placeholder="0" min="0" step="0.01">
+    </div>
+    
+    <div class="form-group">
+        <label for="max_price">Maximum Price (£):</label>
+        <input type="number" id="max_price" placeholder="1000" min="0" step="0.01">
+    </div>
+    
+    <div class="form-group">
+        <label for="condition">Condition:</label>
+        <select id="condition">
+            <option value="">Any</option>
+            <option value="NEW">New</option>
+            <option value="USED">Used</option>
+            <option value="VERY_GOOD">Very Good</option>
+            <option value="GOOD">Good</option>
+            <option value="ACCEPTABLE">Acceptable</option>
+        </select>
+    </div>
+    
+    <button onclick="startMonitor()">Start Monitor</button>
+    <button onclick="stopMonitor()" style="background-color: #f44336;">Stop Monitor</button>
+    
+    <div id="status"></div>
+
+    <script>
+        function startMonitor() {
+            const searchTerm = document.getElementById('search_term').value || 'iPhone 14 Pro';
+            const checkInterval = document.getElementById('check_interval').value || 20;
+            const minPrice = document.getElementById('min_price').value;
+            const maxPrice = document.getElementById('max_price').value;
+            const condition = document.getElementById('condition').value;
+            
+            const data = {
+                search_term: searchTerm,
+                check_interval: checkInterval
+            };
+            
+            if (minPrice) data.min_price = minPrice;
+            if (maxPrice) data.max_price = maxPrice;
+            if (condition) data.condition = condition;
+            
+            fetch('/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerHTML = data.message;
+                document.getElementById('status').style.backgroundColor = 
+                    data.status === 'success' ? '#dff0d8' : '#f2dede';
+            });
+        }
+
+        function stopMonitor() {
+            fetch('/stop', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').innerHTML = data.message;
+                document.getElementById('status').style.backgroundColor = 
+                    data.status === 'success' ? '#dff0d8' : '#f2dede';
+            });
+        }
+    </script>
+</body>
+</html> 
