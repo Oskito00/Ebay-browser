@@ -39,9 +39,11 @@ def start_monitor():
     stop_flag = False
     monitor = EbayMonitor()
     
-    # Clear known items when starting a new search
+    # Reset known items and item details
     monitor.known_items = set()
+    monitor.item_details = {}
     monitor.save_known_items()
+    monitor.save_item_details()
     
     monitor_thread = threading.Thread(
         target=monitor.monitor,
@@ -58,11 +60,17 @@ def start_monitor():
 
 @app.route('/stop', methods=['POST'])
 def stop_monitor():
-    global monitor_thread, stop_flag
+    global monitor_thread, stop_flag, monitor
     if monitor_thread and monitor_thread.is_alive():
         stop_flag = True
+        # Clear known items and item details when stopping
+        if monitor:
+            monitor.known_items = set()
+            monitor.item_details = {}
+            monitor.save_known_items()
+            monitor.save_item_details()
         monitor_thread = None
-        return jsonify({'status': 'success', 'message': 'Monitor stopped'})
+        return jsonify({'status': 'success', 'message': 'Monitor stopped and reset'})
     return jsonify({'status': 'error', 'message': 'No monitor running'})
 
 if __name__ == '__main__':

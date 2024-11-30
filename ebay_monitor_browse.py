@@ -44,19 +44,33 @@ class EbayMonitor:
         )
         return response.json()["access_token"]
 
-    def search_items(self, keywords, filters=None, max_items=200):
+    def search_items(self, keywords, filters=None, max_items=None):
         """Search for items using Browse API with filters"""
         try:
             all_items = []
             offset = 0
             limit = 200
             
+            # Force "pokemon" to be in results by adding quotes
+            modified_keywords = '"pokemon" ' + keywords
+            
+            # Construct price filter based on provided values
+            if filters and (filters.get('min_price') or filters.get('max_price')):
+                price_filter = 'price:['
+                if filters.get('min_price') and filters.get('max_price'):
+                    price_filter += f"{filters['min_price']}..{filters['max_price']}"
+                elif filters.get('min_price'):
+                    price_filter += f"{filters['min_price']}.."
+                elif filters.get('max_price'):
+                    price_filter += f"..{filters['max_price']}"
+                price_filter += ']'
+                filter_string = f'itemLocationCountry:GB,{price_filter},priceCurrency:GBP'
+            else:
+                filter_string = 'itemLocationCountry:GB'
+            
             while True:
-                # Combine filters into a single string
-                filter_string = 'itemLocationCountry:GB,price:[150..],priceCurrency:GBP'
-                
                 params = {
-                    'q': keywords,
+                    'q': modified_keywords,  # Use modified keywords with quotes
                     'filter': filter_string,
                     'sort': 'newlyListed',
                     'limit': str(limit),
@@ -76,7 +90,15 @@ class EbayMonitor:
                 
                 if not results.get('itemSummaries'):
                     break
-                    
+                
+                # # Post-process to filter only Pokemon items
+                # filtered_items = [
+                #     item for item in results['itemSummaries']
+                #     if 'pokemon' in item['title'].lower() or 'pokémon' in item['title'].lower()
+                # ]
+                
+                # print(f"Found {len(results['itemSummaries'])} items, {len(filtered_items)} are Pokemon items")
+                
                 all_items.extend(results['itemSummaries'])
                 offset += limit
                 
