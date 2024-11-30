@@ -55,6 +55,12 @@ class EbayMonitor:
             modified_keywords = '"pokemon" ' + keywords
             
             # Construct price filter based on provided values
+            filter_parts = ['itemLocationCountry:GB']
+            
+            # Add creation date filter for last 7 days
+            filter_parts.append('creationDate:[' + 'P7D' + ']')
+            
+            # Add price filter if specified
             if filters and (filters.get('min_price') or filters.get('max_price')):
                 price_filter = 'price:['
                 if filters.get('min_price') and filters.get('max_price'):
@@ -64,13 +70,15 @@ class EbayMonitor:
                 elif filters.get('max_price'):
                     price_filter += f"..{filters['max_price']}"
                 price_filter += ']'
-                filter_string = f'itemLocationCountry:GB,{price_filter},priceCurrency:GBP'
-            else:
-                filter_string = 'itemLocationCountry:GB'
+                filter_parts.append(price_filter)
+                filter_parts.append('priceCurrency:GBP')
+            
+            # Join all filters
+            filter_string = ','.join(filter_parts)
             
             while True:
                 params = {
-                    'q': modified_keywords,  # Use modified keywords with quotes
+                    'q': modified_keywords,
                     'filter': filter_string,
                     'sort': 'newlyListed',
                     'limit': str(limit),
@@ -87,22 +95,25 @@ class EbayMonitor:
                 print(f"Request URL: {url}?q={params['q']}&filter={params['filter']}&sort={params['sort']}&limit={params['limit']}&offset={params['offset']}")
                 
                 results = response.json()
+                total_items = results.get('total', 0)
+                items_in_page = len(results.get('itemSummaries', []))
+                
+                print(f"Total items available: {total_items}")
+                print(f"Items in this page: {items_in_page}")
+                print(f"Current offset: {offset}")
+                print(f"Items collected so far: {len(all_items)}")
                 
                 if not results.get('itemSummaries'):
+                    print("No items in current page, stopping")
                     break
-                
-                # # Post-process to filter only Pokemon items
-                # filtered_items = [
-                #     item for item in results['itemSummaries']
-                #     if 'pokemon' in item['title'].lower() or 'pokémon' in item['title'].lower()
-                # ]
-                
-                # print(f"Found {len(results['itemSummaries'])} items, {len(filtered_items)} are Pokemon items")
-                
+                    
                 all_items.extend(results['itemSummaries'])
                 offset += limit
                 
-                if max_items and offset >= max_items:
+                # Stop if we've seen all available items
+                if offset >= total_items:
+                    print(f"Reached end of available items ({total_items} total)")
+                    print(f"Final items collected: {len(all_items)}")
                     break
             
             return {"itemSummaries": all_items}
