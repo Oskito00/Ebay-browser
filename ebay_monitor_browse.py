@@ -14,11 +14,14 @@ class EbayMonitor:
         self.base_url = "https://api.ebay.com/buy/browse/v1"
         self.headers = {
             "Authorization": f"Bearer {self._get_access_token()}",
-            "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+            "X-EBAY-C-MARKETPLACE-ID": "EBAY_GB",
+            "X-EBAY-C-ENDUSERCTX": "contextualLocation=country=GB",
             "Content-Type": "application/json"
         }
         self.known_items_file = "known_items.json"
+        self.item_details_file = "item_details.json"
         self.known_items = self.load_known_items()
+        self.item_details = self.load_item_details()
         self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
         self.telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
         
@@ -41,32 +44,46 @@ class EbayMonitor:
         )
         return response.json()["access_token"]
 
-    def search_items(self, keywords, filters=None):
+    def search_items(self, keywords, filters=None, max_items=200):
         """Search for items using Browse API with filters"""
         try:
-            params = {
-                "q": keywords,
-                "sort": "newlyListed",
-                "limit": 100
-            }
+            all_items = []
+            offset = 0
+            limit = 200
             
-            # Add filters if provided
-            if filters:
-                if filters.get('max_price'):
-                    params['price'] = f'[..{filters["max_price"]}]'
-                if filters.get('min_price'):
-                    params['price'] = f'[{filters["min_price"]}..]'
-                if filters.get('min_price') and filters.get('max_price'):
-                    params['price'] = f'[{filters["min_price"]}..{filters["max_price"]}]'
-                if filters.get('condition'):
-                    params['filter'] = f'conditions:{{{filters["condition"]}}}'
-
-            response = requests.get(
-                f"{self.base_url}/item_summary/search",
-                headers=self.headers,
-                params=params
-            )
-            return response.json()
+            while True:
+                # Combine filters into a single string
+                filter_string = 'itemLocationCountry:GB,price:[150..],priceCurrency:GBP'
+                
+                params = {
+                    'q': keywords,
+                    'filter': filter_string,
+                    'sort': 'newlyListed',
+                    'limit': str(limit),
+                    'offset': str(offset)
+                }
+                
+                url = f"{self.base_url}/item_summary/search"
+                response = requests.get(
+                    url,
+                    headers=self.headers,
+                    params=params
+                )
+                
+                print(f"Request URL: {url}?q={params['q']}&filter={params['filter']}&sort={params['sort']}&limit={params['limit']}&offset={params['offset']}")
+                
+                results = response.json()
+                
+                if not results.get('itemSummaries'):
+                    break
+                    
+                all_items.extend(results['itemSummaries'])
+                offset += limit
+                
+                if max_items and offset >= max_items:
+                    break
+            
+            return {"itemSummaries": all_items}
         except Exception as e:
             print(f"Search error: {str(e)}")
             return None
@@ -107,13 +124,56 @@ class EbayMonitor:
         except (FileNotFoundError, json.JSONDecodeError):
             return set()
 
-    def monitor(self, keywords, check_interval=10, filters=None):
+    def load_item_details(self):
+        """Load item details from JSON file"""
+        try:
+            with open(self.item_details_file, 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def save_item_details(self):
+        """Save item details to JSON file"""
+        with open(self.item_details_file, 'w') as f:
+            json.dump(self.item_details, f, indent=2)
+
+    def monitor(self, keywords, check_interval=60, filters=None):
         """Monitor for new items with filters"""
         print(f"Starting monitor for: {keywords}")
         print(f"Checking every {check_interval} seconds")
         if filters:
             print("Filters applied:", filters)
         
+        # First run - silent collection
+        first_run = True
+        results = self.search_items(keywords, filters)
+        if results and 'itemSummaries' in results:
+            items = results['itemSummaries']
+            print(f"\nFirst run: Found {len(items)} items")
+            for item in items:
+                item_id = item['itemId']
+                self.known_items.add(item_id)
+                self.item_details[item_id] = {
+                    'title': item['title'],
+                    'price': item['price'],
+                    'condition': item.get('condition', 'N/A'),
+                    'url': item['itemWebUrl'],
+                    'location': item.get('itemLocation', 'N/A')
+                }
+                # Print each item for inspection
+                print("\nItem found:")
+                print(f"Title: {item['title']}")
+                print(f"Price: {item['price']['value']} {item['price']['currency']}")
+                print(f"Location: {item.get('itemLocation', 'N/A')}")
+                print(f"Link: {item['itemWebUrl']}")
+            
+            self.save_known_items()
+            self.save_item_details()
+            print(f"Initial items saved: {len(self.known_items)} items")
+        
+        first_run = False
+        
+        # Main monitoring loop
         while True:
             try:
                 print(f"\nChecking eBay at {datetime.now()}")
@@ -130,13 +190,25 @@ class EbayMonitor:
                             print("\n=== NEW ITEM FOUND ===")
                             print(f"Title: {item['title']}")
                             print(f"Price: {item['price']['value']} {item['price']['currency']}")
-                            print(f"Condition: {item.get('condition', 'N/A')}")
+                            print(f"Location: {item.get('itemLocation', 'N/A')}")
                             print(f"Link: {item['itemWebUrl']}")
                             print("=====================")
                             
-                            self.send_notification(item)
+                            if not first_run:
+                                self.send_notification(item)
+                            
                             self.known_items.add(item_id)
+                            self.item_details[item_id] = {
+                                'title': item['title'],
+                                'price': item['price'],
+                                'condition': item.get('condition', 'N/A'),
+                                'url': item['itemWebUrl'],
+                                'location': item.get('itemLocation', 'N/A')
+                            }
                             self.save_known_items()
+                            self.save_item_details()
+                
+                    print(f"Total known items: {len(self.known_items)}")
                 
                 time.sleep(check_interval)
                 

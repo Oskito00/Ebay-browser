@@ -1,19 +1,37 @@
-## Ebay Monitor
+# eBay Monitor
 
-This is a simple Flask application that monitors eBay listings for a given search term and sends notifications when new listings are found.
+A web application that monitors eBay listings and sends Telegram notifications for new items.
 
-### Features
+## Setup
 
-- Monitor eBay listings for a given search term
-- Send notifications via Telegram when new listings are found
-- Stop the monitor at any time
+1. Install requirements:
+```bash
+pip install -r requirements.txt
+```
 
+2. Create a `.env` file with your credentials:
+```env
+EBAY_CLIENT_ID=your_ebay_client_id
+EBAY_CLIENT_SECRET=your_ebay_client_secret
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
 
-## To get set up
+3. Run the application:
+```bash
+python app.py
+```
 
-Create a telegram bot
-- get the chat ID by visiting https://api.telegram.org/bot<token>/getUpdates
-and the bot ID token from <token>
-- add both of these to the ENV file
+## Features
 
-Run python.app
+- Monitor eBay listings for specific search terms
+- Filter by price range and item condition
+- Receive real-time Telegram notifications
+- Web interface for easy configuration
+
+## Usage
+
+1. Open `http://localhost:5000` in your browser
+2. Enter your search term
+3. Set any desired filters
+4. Click "Start Monitor"
