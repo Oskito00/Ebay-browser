@@ -67,9 +67,6 @@ class EbayMonitor:
             offset = 0
             limit = 200
             
-            # Use the keywords as provided
-            modified_keywords = keywords
-            
             # Construct price filter based on provided values
             filter_parts = ['itemLocationCountry:GB']
             
@@ -91,7 +88,7 @@ class EbayMonitor:
             
             while True:
                 params = {
-                    'q': modified_keywords,
+                    'q': keywords,
                     'filter': filter_string,
                     'sort': 'newlyListed',
                     'limit': str(limit),
@@ -109,18 +106,21 @@ class EbayMonitor:
                 
                 results = response.json()
                 total_items = results.get('total', 0)
-                print(f"Total items available: {total_items}")
+                print(f"Total items across all pages: {total_items}")
                 
                 if not results.get('itemSummaries'):
                     break
                     
-                # Post-process to filter items with either "pokemon" or "pokémon"
+                # Get required keywords from filters, default to ['pokemon', 'pokémon'] if not provided
+                required_keywords = filters.get('required_keywords', ['pokemon', 'pokémon']) if filters else ['pokemon', 'pokémon']
+                
+                # Post-process to filter items that contain any of the required keywords
                 filtered_items = [
                     item for item in results['itemSummaries']
-                    if 'pokemon' in item['title'].lower() or 'pokémon' in item['title'].lower()
+                    if any(keyword.lower() in item['title'].lower() for keyword in required_keywords)
                 ]
-                
-                print(f"Found {len(filtered_items)} relevant items in this page")
+
+                print(f"Found {len(filtered_items)} items matching required keywords: {required_keywords}")
                 all_items.extend(filtered_items)
                 offset += limit
                 
@@ -190,7 +190,7 @@ class EbayMonitor:
         if filters:
             print("Filters applied:", filters)
         
-        # First run - silent collection
+        # First run - silent collecting get all the items and store them in a json file
         first_run = True
         results = self.search_items(keywords, filters)
         if results and 'itemSummaries' in results:
@@ -206,12 +206,6 @@ class EbayMonitor:
                     'url': item['itemWebUrl'],
                     'location': item.get('itemLocation', 'N/A')
                 }
-                # Print each item for inspection
-                print("\nItem found:")
-                print(f"Title: {item['title']}")
-                print(f"Price: {item['price']['value']} {item['price']['currency']}")
-                print(f"Location: {item.get('itemLocation', 'N/A')}")
-                print(f"Link: {item['itemWebUrl']}")
             
             self.save_known_items()
             self.save_item_details()
@@ -219,7 +213,7 @@ class EbayMonitor:
         
         first_run = False
         
-        # Main monitoring loop
+        # Main monitoring loop - notify when a new item is found
         while True:
             try:
                 print(f"\nChecking eBay at {datetime.now()}")
@@ -261,41 +255,3 @@ class EbayMonitor:
             except Exception as e:
                 print(f"Error occurred: {str(e)}")
                 time.sleep(check_interval)
-
-if __name__ == "__main__":
-    # Check environment variables
-    required_vars = [
-        'EBAY_CLIENT_ID', 
-        'EBAY_CLIENT_SECRET',
-        'TELEGRAM_BOT_TOKEN',
-        'TELEGRAM_CHAT_ID'
-    ]
-    missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
-    if missing_vars:
-        print("Missing required environment variables:")
-        for var in missing_vars:
-            print(f"- {var}")
-        exit(1)
-    
-    # Initialize monitor
-    monitor = EbayMonitor()
-    
-    # Get user input
-    print("\n=== eBay Item Monitor ===")
-    search_term = input("Enter search term (default: iPhone 14 Pro): ").strip()
-    if not search_term:
-        search_term = "iPhone 14 Pro"
-    
-    try:
-        check_interval = int(input("Enter check interval in seconds (default: 20): ").strip())
-    except ValueError:
-        check_interval = 20
-    
-    print(f"\nStarting monitor:")
-    print(f"- Search term: {search_term}")
-    print(f"- Check interval: {check_interval} seconds")
-    print("\nPress Ctrl+C to stop monitoring\n")
-    
-    # Start monitoring
-    monitor.monitor(search_term, check_interval)

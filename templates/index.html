@@ -36,6 +36,12 @@
             padding: 10px;
             border-radius: 4px;
         }
+        small {
+            color: #666;
+            font-size: 0.8em;
+            margin-top: 4px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -44,6 +50,14 @@
     <div class="form-group">
         <label for="search_term">Search Term:</label>
         <input type="text" id="search_term" placeholder="iPhone 14 Pro">
+    </div>
+    
+    <div class="form-group">
+        <label for="required_keywords">Required Keywords (comma-separated):</label>
+        <input type="text" id="required_keywords" placeholder="pokemon, pokémon">
+        <small style="color: #666; font-size: 0.8em; margin-top: 4px; display: block;">
+            Items must contain at least one of these keywords in their title
+        </small>
     </div>
     
     <div class="form-group">
@@ -85,6 +99,8 @@
             const minPrice = document.getElementById('min_price').value;
             const maxPrice = document.getElementById('max_price').value;
             const condition = document.getElementById('condition').value;
+            const requiredKeywords = document.getElementById('required_keywords').value;
+
             
             const data = {
                 search_term: searchTerm,
@@ -94,6 +110,10 @@
             if (minPrice) data.min_price = minPrice;
             if (maxPrice) data.max_price = maxPrice;
             if (condition) data.condition = condition;
+            if (requiredKeywords) {
+                // Split by commas and trim whitespace from each keyword
+                data.required_keywords = requiredKeywords.split(',').map(k => k.trim());
+            }
             
             fetch('/start', {
                 method: 'POST',

@@ -1,2 +1,4 @@
 .env
 __pycache__/
+known_items.json
+item_details.json

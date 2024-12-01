@@ -32,6 +32,8 @@ def start_monitor():
         filters['max_price'] = float(data['max_price'])
     if data.get('condition'):
         filters['condition'] = data['condition']
+    if data.get('required_keywords'):
+        filters['required_keywords'] = data['required_keywords']
     
     if monitor_thread and monitor_thread.is_alive():
         return jsonify({'status': 'error', 'message': 'Monitor already running'})
