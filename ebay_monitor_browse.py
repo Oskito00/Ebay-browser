@@ -12,8 +12,9 @@ class EbayMonitor:
         self.client_id = os.getenv('EBAY_CLIENT_ID')
         self.client_secret = os.getenv('EBAY_CLIENT_SECRET')
         self.base_url = "https://api.ebay.com/buy/browse/v1"
+        self.token_timestamp = time.time()
+        self.token_expiry = 7200  # 2 hours in seconds
         self.headers = {
-            "Authorization": f"Bearer {self._get_access_token()}",
             "X-EBAY-C-MARKETPLACE-ID": "EBAY_GB",
             "X-EBAY-C-ENDUSERCTX": "contextualLocation=country=GB",
             "Content-Type": "application/json"
@@ -44,9 +45,24 @@ class EbayMonitor:
         )
         return response.json()["access_token"]
 
+    def _refresh_token_if_needed(self):
+        """Check if token needs refresh and update if necessary"""
+        if time.time() - self.token_timestamp >= self.token_expiry:
+            print("Refreshing OAuth token...")
+            self.token_timestamp = time.time()
+            return self._get_access_token()
+        return None
+
     def search_items(self, keywords, filters=None, max_items=None):
         """Search for items using Browse API with filters"""
         try:
+            # Refresh token if needed
+            new_token = self._refresh_token_if_needed()
+            if new_token:
+                self.headers["Authorization"] = f"Bearer {new_token}"
+            else:
+                self.headers["Authorization"] = f"Bearer {self._get_access_token()}"
+
             all_items = []
             offset = 0
             limit = 200
