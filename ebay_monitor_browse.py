@@ -114,13 +114,18 @@ class EbayMonitor:
                 # Get required keywords from filters, default to ['pokemon', 'pokémon'] if not provided
                 required_keywords = filters.get('required_keywords', ['pokemon', 'pokémon']) if filters else ['pokemon', 'pokémon']
                 
-                # Post-process to filter items that contain any of the required keywords
+                # Define exclusion keywords
+                exclusion_keywords = ['sun', 'moon', 'scarlet', 'violet']
+                
+                # Post-process to filter items that contain required keywords but not exclusion keywords
                 filtered_items = [
                     item for item in results['itemSummaries']
                     if any(keyword.lower() in item['title'].lower() for keyword in required_keywords)
+                    and not any(ex_keyword.lower() in item['title'].lower() for ex_keyword in exclusion_keywords)
                 ]
 
                 print(f"Found {len(filtered_items)} items matching required keywords: {required_keywords}")
+                print(f"(Excluded items containing: {exclusion_keywords})")
                 all_items.extend(filtered_items)
                 offset += limit
                 
