@@ -1,146 +1,580 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>eBay Monitor</title>
+    <title>eBay Query Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #6366f1;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Inter', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1440px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 2rem;
         }
-        .form-group {
-            margin-bottom: 15px;
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
         }
-        label {
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 2rem;
+            height: 80vh;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        .form-panel .card {
+            flex: 1;
+        }
+
+        .queries-panel .card {
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .monitor-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.active {
+            background: #10b981; /* Green */
+        }
+
+        .status-dot.inactive {
+            background: #dc2626; /* Red */
+        }
+
+        .query-item {
+            padding: 1rem;
+            background: var(--background);
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            transition: transform 0.2s;
+        }
+
+        .query-item:hover {
+            transform: translateX(4px);
+        }
+
+        #toggleMonitor {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .queries-panel .card {
+                height: auto;
+            }
+        }
+
+        .form-grid {
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 640px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            .query-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-group {
+                margin-bottom: 1rem;
+            }
+            
+            select {
+                font-size: 1rem;
+                padding: 1rem;
+            }
+        }
+
+        .input-group label {
             display: block;
-            margin-bottom: 5px;
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
         }
+
+        .input-group input::placeholder {
+            color: #94a3b8;
+        }
+
         input, select {
             width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
         }
+
         button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
+            background: var(--primary);
             color: white;
             border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
             cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
         }
+
         button:hover {
-            background-color: #45a049;
+            opacity: 0.9;
         }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
+
+        .query-list {
+            margin-top: 2rem;
         }
-        small {
-            color: #666;
-            font-size: 0.8em;
-            margin-top: 4px;
-            display: block;
+
+        .query-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .active {
+            background: #10b981;
+        }
+
+        .inactive {
+            background: #ef4444;
+        }
+
+        .input-group input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .query-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .query-meta {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .query-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .remove-btn {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .remove-btn:hover {
+            background: #fee2e2;
+        }
+
+        .help-text {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .select-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            background-color: white;
+        }
+
+        .tag.exclude {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .query-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
         }
     </style>
 </head>
 <body>
-    <h1>eBay Item Monitor</h1>
-    
-    <div class="form-group">
-        <label for="search_term">Search Term:</label>
-        <input type="text" id="search_term" placeholder="iPhone 14 Pro">
+    <div class="container">
+        <header>
+            <h1>eBay Monitor </h1>
+            <div class="monitor-status">
+                <span class="status-dot"></span>
+                <span id="statusText">Not Monitoring</span>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <!-- Query Form Panel -->
+            <div class="panel form-panel">
+                <div class="card">
+                    <h2>Create New Query</h2>
+                    
+                    <div class="form-grid">
+                        <!-- Search Keywords -->
+                        <div class="input-group">
+                            <label>Search Keywords</label>
+                            <input type="text" id="keywords" placeholder="e.g. Pokemon cards" required>
+                        </div>
+                        
+                        <!-- Required Keywords -->
+                        <div class="input-group">
+                            <label>Required Keywords</label>
+                            <input type="text" id="requiredKeywords" placeholder="e.g. charizard, 1st edition">
+                            <div class="help-text">Comma-separated words that must be in title</div>
+                        </div>
+                        
+                        <!-- Exclude Keywords -->
+                        <div class="input-group">
+                            <label>Exclude Keywords</label>
+                            <input type="text" id="excludeKeywords" placeholder="e.g. fake, replica">
+                            <div class="help-text">Comma-separated words to exclude</div>
+                        </div>
+                        
+                        <!-- Price Range -->
+                        <div class="input-group">
+                            <label>Minimum Price (£)</label>
+                            <input type="number" id="minPrice" placeholder="0" min="0" step="0.01">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Maximum Price (£)</label>
+                            <input type="number" id="maxPrice" placeholder="1000" min="0" step="0.01">
+                        </div>
+                        
+                        <!-- Condition -->
+                        <div class="input-group">
+                            <label>Condition</label>
+                            <select id="condition">
+                                <option value="">Any Condition</option>
+                                <option value="NEW">New</option>
+                                <option value="USED">Used</option>
+                                <option value="VERY_GOOD">Very Good</option>
+                                <option value="GOOD">Good</option>
+                                <option value="ACCEPTABLE">Acceptable</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Schedule</label>
+                            <select id="schedule">
+                                <option value="60">Every 1 minute</option>
+                                <option value="300">Every 5 minutes</option>
+                                <option value="900">Every 15 minutes</option>
+                                <option value="3600">Every 1 hour</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="addQuery()" style="margin-top: 1rem;">
+                        Add Query
+                    </button>
+                </div>
+                
+                <div class="card control-card">
+                    <button 
+                        id="toggleMonitor" 
+                        onclick="controlMonitor()"
+                        style="background: #10b981;"
+                    >
+                        Start Monitoring
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Queries Panel -->
+            <div class="panel queries-panel">
+                <div class="card">
+                    <h2>Active Queries</h2>
+                    <div id="queriesContainer"></div>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    <div class="form-group">
-        <label for="required_keywords">Required Keywords (comma-separated):</label>
-        <input type="text" id="required_keywords" placeholder="pokemon, pokémon">
-        <small style="color: #666; font-size: 0.8em; margin-top: 4px; display: block;">
-            Items must contain at least one of these keywords in their title
-        </small>
-    </div>
-    
-    <div class="form-group">
-        <label for="check_interval">Check Interval (seconds):</label>
-        <input type="number" id="check_interval" value="60" min="30">
-    </div>
-    
-    <div class="form-group">
-        <label for="min_price">Minimum Price (£):</label>
-        <input type="number" id="min_price" placeholder="0" min="0" step="0.01">
-    </div>
-    
-    <div class="form-group">
-        <label for="max_price">Maximum Price (£):</label>
-        <input type="number" id="max_price" placeholder="1000" min="0" step="0.01">
-    </div>
-    
-    <div class="form-group">
-        <label for="condition">Condition:</label>
-        <select id="condition">
-            <option value="">Any</option>
-            <option value="NEW">New</option>
-            <option value="USED">Used</option>
-            <option value="VERY_GOOD">Very Good</option>
-            <option value="GOOD">Good</option>
-            <option value="ACCEPTABLE">Acceptable</option>
-        </select>
-    </div>
-    
-    <button onclick="startMonitor()">Start Monitor</button>
-    <button onclick="stopMonitor()" style="background-color: #f44336;">Stop Monitor</button>
-    
-    <div id="status"></div>
 
     <script>
-        function startMonitor() {
-            const searchTerm = document.getElementById('search_term').value || 'iPhone 14 Pro';
-            const checkInterval = document.getElementById('check_interval').value || 20;
-            const minPrice = document.getElementById('min_price').value;
-            const maxPrice = document.getElementById('max_price').value;
-            const condition = document.getElementById('condition').value;
-            const requiredKeywords = document.getElementById('required_keywords').value;
-
-            
-            const data = {
-                search_term: searchTerm,
-                check_interval: checkInterval
+        async function addQuery() {
+            const query = {
+                keywords: document.getElementById('keywords').value,
+                filters: {
+                    required_keywords: document.getElementById('requiredKeywords').value,
+                    exclude_keywords: document.getElementById('excludeKeywords').value,
+                    min_price: document.getElementById('minPrice').value,
+                    max_price: document.getElementById('maxPrice').value,
+                    condition: document.getElementById('condition').value
+                }
             };
             
-            if (minPrice) data.min_price = minPrice;
-            if (maxPrice) data.max_price = maxPrice;
-            if (condition) data.condition = condition;
-            if (requiredKeywords) {
-                // Split by commas and trim whitespace from each keyword
-                data.required_keywords = requiredKeywords.split(',').map(k => k.trim());
+            // Convert comma-separated strings to arrays
+            query.filters.required_keywords = query.filters.required_keywords
+                .split(',')
+                .map(kw => kw.trim())
+                .filter(kw => kw);
+            
+            query.filters.exclude_keywords = query.filters.exclude_keywords
+                .split(',')
+                .map(kw => kw.trim())
+                .filter(kw => kw);
+            
+            // Validate required fields
+            if (!query.keywords) {
+                alert('Please enter search keywords');
+                return;
             }
             
-            fetch('/start', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').innerHTML = data.message;
-                document.getElementById('status').style.backgroundColor = 
-                    data.status === 'success' ? '#dff0d8' : '#f2dede';
-            });
+            try {
+                const response = await fetch('/queries', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'add',
+                        query: query
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to add query');
+                }
+                
+                await loadQueries();
+                clearForm();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to add query. Check console for details.');
+            }
         }
 
-        function stopMonitor() {
-            fetch('/stop', {
-                method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').innerHTML = data.message;
-                document.getElementById('status').style.backgroundColor = 
-                    data.status === 'success' ? '#dff0d8' : '#f2dede';
-            });
+        function clearForm() {
+            document.getElementById('keywords').value = '';
+            document.getElementById('minPrice').value = '';
+            document.getElementById('maxPrice').value = '';
+        }
+
+        async function removeQuery(queryId) {
+            try {
+                const response = await fetch('/queries', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'remove',
+                        query_id: queryId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to remove query');
+                }
+                
+                await loadQueries();
+            } catch (error) {
+                console.error('Error removing query:', error);
+                alert('Failed to remove query');
+            }
+        }
+
+        async function controlMonitor() {
+            try {
+                const currentAction = document.getElementById('toggleMonitor').textContent.includes('Stop') ? 'stop' : 'start';
+                const response = await fetch('/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: currentAction})
+                });
+                
+                if (!response.ok) throw new Error('Control failed');
+                
+                // Immediately update UI while waiting for full refresh
+                const statusDot = document.querySelector('.status-dot');
+                const toggleButton = document.getElementById('toggleMonitor');
+                
+                if (currentAction === 'stop') {
+                    statusDot.classList.remove('active');
+                    statusDot.classList.add('inactive');
+                    toggleButton.textContent = 'Start Monitoring';
+                    toggleButton.style.backgroundColor = '#10b981';
+                    document.getElementById('statusText').textContent = 'Not Monitoring';
+                } else {
+                    statusDot.classList.remove('inactive');
+                    statusDot.classList.add('active');
+                    toggleButton.textContent = 'Stop Monitoring';
+                    toggleButton.style.backgroundColor = '#dc2626';
+                    document.getElementById('statusText').textContent = 'Monitoring Active';
+                }
+                
+                // Then refresh queries
+                await loadQueries();
+                
+            } catch (error) {
+                console.error('Control error:', error);
+                alert('Failed to toggle monitoring');
+            }
+        }
+
+        async function loadQueries() {
+            const response = await fetch('/queries');
+            const data = await response.json();
+            
+            const container = document.getElementById('queriesContainer');
+            container.innerHTML = '';
+            
+            if (Object.keys(data.queries).length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #64748b; padding: 2rem;">
+                        No active queries - add one above to get started
+                    </div>
+                `;
+            } else {
+                for (const [queryId, config] of Object.entries(data.queries)) {
+                    const div = document.createElement('div');
+                    div.className = 'query-item';
+                    div.innerHTML = `
+                        <div class="query-content">
+                            <h3>${config.keywords}</h3>
+                            <div class="query-details">
+                                ${config.filters.min_price ? `<span>Min: £${config.filters.min_price}</span>` : ''}
+                                ${config.filters.max_price ? `<span>Max: £${config.filters.max_price}</span>` : ''}
+                                ${config.filters.condition ? `<span>Condition: ${config.filters.condition}</span>` : ''}
+                            </div>
+                            ${config.filters.required_keywords?.length ? `
+                            <div class="query-tags">
+                                ${config.filters.required_keywords.map(kw => `
+                                    <span class="tag">${kw}</span>
+                                `).join('')}
+                            </div>` : ''}
+                            ${config.filters.exclude_keywords?.length ? `
+                            <div class="exclude-tags">
+                                ${config.filters.exclude_keywords.map(kw => `
+                                    <span class="tag exclude">!${kw}</span>
+                                `).join('')}
+                            </div>` : ''}
+                        </div>
+                        <button 
+                            class="remove-btn"
+                            onclick="removeQuery('${encodeURIComponent(queryId)}')"
+                        >
+                            Remove
+                        </button>
+                    `;
+                    container.appendChild(div);
+                }
+            }
         }
     </script>
 </body>
-</html> 
+</html>

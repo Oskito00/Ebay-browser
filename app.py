@@ -4,12 +4,15 @@ import threading
 import os
 from dotenv import load_dotenv
 import argparse
+import json
+import hashlib
+import uuid
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-monitor = None
+monitor = EbayMonitor()  # Initialize on app start
 monitor_thread = None
 stop_flag = False
 
@@ -17,64 +20,62 @@ stop_flag = False
 def home():
     return render_template('index.html')
 
-@app.route('/start', methods=['POST'])
-def start_monitor():
-    global monitor, monitor_thread, stop_flag
-    
+@app.route('/queries', methods=['POST'])
+def manage_queries():
     data = request.json
-    search_term = data.get('search_term', 'iPhone 14 Pro')
-    check_interval = int(data.get('check_interval', 20))
+    action = data.get('action')
     
-    # Get filters
-    filters = {}
-    if data.get('min_price'):
-        filters['min_price'] = float(data['min_price'])
-    if data.get('max_price'):
-        filters['max_price'] = float(data['max_price'])
-    if data.get('condition'):
-        filters['condition'] = data['condition']
-    if data.get('required_keywords'):
-        filters['required_keywords'] = data['required_keywords']
+    if action == 'add':
+        query_data = data['query']
+        query_id = str(uuid.uuid4())
+        
+        # Convert empty strings to None for prices
+        filters = {
+            'required_keywords': query_data.get('filters', {}).get('required_keywords', []),
+            'exclude_keywords': query_data.get('filters', {}).get('exclude_keywords', []),
+            'min_price': query_data.get('filters', {}).get('min_price') or None,
+            'max_price': query_data.get('filters', {}).get('max_price') or None,
+            'condition': query_data.get('filters', {}).get('condition') or None
+        }
+        
+        monitor.add_query(
+            query_id=query_id,
+            keywords=query_data['keywords'],
+            filters={k: v for k, v in filters.items() if v is not None}
+        )
+        
+        return jsonify({'status': 'success', 'query_id': query_id})
     
-    if monitor_thread and monitor_thread.is_alive():
-        return jsonify({'status': 'error', 'message': 'Monitor already running'})
+    elif action == 'remove':
+        query_id = data.get('query_id')
+        if not query_id:
+            return jsonify({'status': 'error', 'message': 'Missing query_id'}), 400
+            
+        monitor.remove_query(query_id)
+        return jsonify({'status': 'success'})
     
-    stop_flag = False
-    monitor = EbayMonitor(instance_name=args.instance_name)
-    
-    # Reset known items and item details
-    monitor.known_items = set()
-    monitor.item_details = {}
-    monitor.save_known_items()
-    monitor.save_item_details()
-    
-    monitor_thread = threading.Thread(
-        target=monitor.monitor,
-        args=(search_term, check_interval),
-        kwargs={'filters': filters}
-    )
-    monitor_thread.daemon = True
-    monitor_thread.start()
-    
-    return jsonify({
-        'status': 'success',
-        'message': f'Monitor started for {search_term}'
-    })
+    return jsonify({'status': 'error'})
 
-@app.route('/stop', methods=['POST'])
-def stop_monitor():
-    global monitor_thread, stop_flag, monitor
-    if monitor_thread and monitor_thread.is_alive():
-        stop_flag = True
-        # Clear known items and item details when stopping
-        if monitor:
-            monitor.known_items = set()
-            monitor.item_details = {}
-            monitor.save_known_items()
-            monitor.save_item_details()
-        monitor_thread = None
-        return jsonify({'status': 'success', 'message': 'Monitor stopped and reset'})
-    return jsonify({'status': 'error', 'message': 'No monitor running'})
+@app.route('/control', methods=['POST'])
+def control_monitor():
+    action = request.json.get('action')
+    
+    if action == 'start':
+        monitor.active = True
+    elif action == 'stop':
+        monitor.active = False
+    else:
+        return jsonify({'status': 'error'}), 400
+    
+    monitor._save_queries()  # Ensure state persists
+    return jsonify({'status': 'success', 'active': monitor.active})
+
+@app.route('/queries', methods=['GET'])
+def get_queries():
+    return jsonify({
+        'queries': monitor.queries,
+        'active': monitor.active
+    })
 
 if __name__ == '__main__':
     # Setup argument parser

@@ -4,47 +4,74 @@ import time
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+import threading
+from urllib.parse import urlencode
+import traceback
 
 load_dotenv()
 
 class EbayMonitor:
-    def __init__(self, instance_name="default"):
+    def __init__(self):
+        self.queries = {}  # {query_id: {config}}
+        self.known_items = {}  # {query_id: set()}
+        self.active = False
+        self.lock = threading.Lock()
+        self._load_queries()
+        
+        # Existing auth setup
         self.client_id = os.getenv('EBAY_CLIENT_ID')
         self.client_secret = os.getenv('EBAY_CLIENT_SECRET')
         self.base_url = "https://api.ebay.com/buy/browse/v1"
-        self.token_timestamp = time.time()
-        self.token_expiry = 7200  # 2 hours in seconds
         self.headers = {
             "X-EBAY-C-MARKETPLACE-ID": "EBAY_GB",
-            "X-EBAY-C-ENDUSERCTX": "contextualLocation=country=GB",
             "Content-Type": "application/json"
         }
-        self.instance_name = instance_name
-        self.known_items_file = f"known_items_{instance_name}.json"
-        self.item_details_file = f"item_details_{instance_name}.json"
-        self.known_items = self.load_known_items()
-        self.item_details = self.load_item_details()
+        self._refresh_token()
+
+        # Telegram setup
         self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
         self.telegram_chat_id = os.getenv('TELEGRAM_CHAT_ID')
-        
-    def _get_access_token(self):
-        """Get OAuth token from eBay"""
-        url = "https://api.ebay.com/identity/v1/oauth2/token"
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
-        data = {
-            "grant_type": "client_credentials",
-            "scope": "https://api.ebay.com/oauth/api_scope"
-        }
-        
-        response = requests.post(
-            url,
-            headers=headers,
-            data=data,
-            auth=(self.client_id, self.client_secret)
+
+        # Thread verification
+        self.monitor_thread = threading.Thread(
+            target=self.monitor_loop,
+            name="EbayMonitorThread",
+            daemon=True
         )
-        return response.json()["access_token"]
+        self.monitor_thread.start()
+        print(f"Thread started - Alive: {self.monitor_thread.is_alive()}")
+        print(f"Active threads: {threading.enumerate()}")
+
+        # Add to class __init__
+        self.last_request_time = time.time()
+
+    def _get_access_token(self):
+        try:
+            print("\n=== Attempting to get eBay access token ===")
+            url = "https://api.ebay.com/identity/v1/oauth2/token"
+            response = requests.post(
+                url,
+                auth=(self.client_id, self.client_secret),
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                data={
+                    "grant_type": "client_credentials",
+                    "scope": "https://api.ebay.com/oauth/api_scope"
+                }
+            )
+            response.raise_for_status()
+            token_data = response.json()
+            self.headers["Authorization"] = f"Bearer {token_data['access_token']}"
+            print("Successfully obtained access token")
+            return token_data["access_token"]
+        
+        except Exception as e:
+            print(f"\n!!! Token acquisition failed !!!")
+            print(f"Error Type: {type(e).__name__}")
+            print(f"Error Message: {str(e)}")
+            if hasattr(e, 'response'):
+                print(f"Response Status: {e.response.status_code}")
+                print(f"Response Body: {e.response.text}")
+            raise
 
     def _refresh_token_if_needed(self):
         """Check if token needs refresh and update if necessary"""
@@ -54,97 +81,55 @@ class EbayMonitor:
             return self._get_access_token()
         return None
 
-    def search_items(self, keywords, filters=None, max_items=None):
-        """Search for items using Browse API with filters"""
+    def search_items(self, keywords, filters=None):
+        all_items = []
+        offset = 0
+        total_pages = 1  # Initialize with at least one page
+        
         try:
-            # Refresh token if needed
-            new_token = self._refresh_token_if_needed()
-            if new_token:
-                self.headers["Authorization"] = f"Bearer {new_token}"
-            else:
-                self.headers["Authorization"] = f"Bearer {self._get_access_token()}"
-
-            all_items = []
-            offset = 0
-            limit = 200
-            
-            # Construct price filter based on provided values
-            filter_parts = ['itemLocationCountry:GB']
-            
-            # Add price filter if specified
-            if filters and (filters.get('min_price') or filters.get('max_price')):
-                price_filter = 'price:['
-                if filters.get('min_price') and filters.get('max_price'):
-                    price_filter += f"{filters['min_price']}..{filters['max_price']}"
-                elif filters.get('min_price'):
-                    price_filter += f"{filters['min_price']}.."
-                elif filters.get('max_price'):
-                    price_filter += f"..{filters['max_price']}"
-                price_filter += ']'
-                filter_parts.append(price_filter)
-                filter_parts.append('priceCurrency:GBP')
-            
-            # Join all filters
-            filter_string = ','.join(filter_parts)
-            
-            while True:
+            while offset < total_pages * 100:  # 100 items per page
                 params = {
                     'q': keywords,
-                    'filter': filter_string,
-                    'sort': 'newlyListed',
-                    'limit': str(limit),
-                    'offset': str(offset)
+                    'limit': 100,
+                    'offset': offset,
+                    'filter': self._build_filter_string(filters)
                 }
                 
-                url = f"{self.base_url}/item_summary/search"
+                print(f"Fetching page {(offset//100)+1} (offset: {offset})")
                 response = requests.get(
-                    url,
+                    "https://api.ebay.com/buy/browse/v1/item_summary/search",
                     headers=self.headers,
                     params=params
                 )
+                response.raise_for_status()
                 
-                print(f"Request URL: {url}?q={params['q']}&filter={params['filter']}&sort={params['sort']}&limit={params['limit']}&offset={params['offset']}")
+                data = response.json()
+                all_items.extend(data.get('itemSummaries', []))
                 
-                results = response.json()
-                total_items = results.get('total', 0)
-                print(f"Total items across all pages: {total_items}")
+                # Get total pages
+                total = data.get('total', 0)
+                total_pages = max(total_pages, (total // 100) + 1)
                 
-                if not results.get('itemSummaries'):
+                # Break if no more items
+                if len(data.get('itemSummaries', [])) < 100:
                     break
                     
-                # Get required keywords from filters
-                required_keywords = filters.get('required_keywords') if filters else None
+                offset += 100
+                time.sleep(1)  # Rate limit
                 
-                # Define exclusion keywords
-                exclusion_keywords = []
+                print(f"Page {(offset//100)+1}: Found {len(data.get('itemSummaries', []))} items")
                 
-                if required_keywords:
-                    # Post-process to filter items that contain required keywords but not exclusion keywords
-                    filtered_items = [
-                        item for item in results['itemSummaries']
-                        if any(keyword.lower() in item['title'].lower() for keyword in required_keywords)
-                        and not any(ex_keyword.lower() in item['title'].lower() for ex_keyword in exclusion_keywords)
-                    ]
-                else:
-                    filtered_items = results['itemSummaries']
-
-                print(f"Found {len(filtered_items)} items matching required keywords: {required_keywords}")
-                print(f"(Excluded items containing: {exclusion_keywords})")
-                all_items.extend(filtered_items)
-                offset += limit
-                
-                if offset >= total_items:
-                    print(f"Reached end of available items ({total_items} total)")
-                    break
+            return {'itemSummaries': all_items}
             
-            print(f"Total relevant items collected: {len(all_items)}")
-            return {"itemSummaries": all_items}
         except Exception as e:
-            print(f"Search error: {str(e)}")
+            print(f"Search failed: {str(e)}")
             return None
 
     def send_notification(self, item):
-        """Send Telegram notification for new item"""
+        if not self.telegram_token or not self.telegram_chat_id:
+            print("Telegram credentials not configured")
+            return
+        
         message = (
             f"🔔 *New eBay Item Found!*\n\n"
             f"📦 *Title:* {item['title']}\n"
@@ -161,10 +146,11 @@ class EbayMonitor:
                     "text": message,
                     "parse_mode": "Markdown",
                     "disable_web_page_preview": False
-                }
+                },
+                timeout=10
             )
         except Exception as e:
-            print(f"Failed to send Telegram notification: {str(e)}")
+            print(f"Telegram notification failed: {str(e)}")
 
     def save_known_items(self):
         """Save known items to JSON file"""
@@ -192,75 +178,196 @@ class EbayMonitor:
         with open(self.item_details_file, 'w') as f:
             json.dump(self.item_details, f, indent=2)
 
-    def monitor(self, keywords, check_interval=60, filters=None):
-        """Monitor for new items with filters"""
-        print(f"Starting monitor for: {keywords}")
-        print(f"Checking every {check_interval} seconds")
+    def add_query(self, query_id, keywords, filters=None):
+        # Add validation
         if filters:
-            print("Filters applied:", filters)
+            min_price = filters.get('min_price')
+            max_price = filters.get('max_price')
+            if min_price and max_price and float(min_price) > float(max_price):
+                raise ValueError("Minimum price cannot exceed maximum price")
         
-        # First run - silent collecting get all the items and store them in a json file
-        first_run = True
-        results = self.search_items(keywords, filters)
-        if results and 'itemSummaries' in results:
-            items = results['itemSummaries']
-            print(f"\nFirst run: Found {len(items)} items")
-            for item in items:
-                item_id = item['itemId']
-                self.known_items.add(item_id)
-                self.item_details[item_id] = {
-                    'title': item['title'],
-                    'price': item['price'],
-                    'condition': item.get('condition', 'N/A'),
-                    'url': item['itemWebUrl'],
-                    'location': item.get('itemLocation', 'N/A')
-                }
-            
-            self.save_known_items()
-            self.save_item_details()
-            print(f"Initial items saved: {len(self.known_items)} items")
-        
-        first_run = False
-        
-        # Main monitoring loop - notify when a new item is found
+        with self.lock:
+            self.queries[query_id] = {
+                'keywords': keywords,
+                'filters': filters or {},
+                'first_run': True,
+                'created': datetime.now().isoformat()
+            }
+            self.known_items[query_id] = set()
+            self._save_queries()
+
+    def remove_query(self, query_id):
+        with self.lock:
+            if query_id in self.queries:
+                del self.queries[query_id]
+            if query_id in self.known_items:
+                del self.known_items[query_id]
+            self._save_queries()
+
+    def _save_queries(self):
+        data = {
+            'active': self.active,
+            'queries': self.queries,
+            'known_items': {k: list(v) for k, v in self.known_items.items()}
+        }
+        with open('queries.json', 'w') as f:
+            json.dump(data, f)
+
+    def _load_queries(self):
+        try:
+            with open('queries.json', 'r') as f:
+                data = json.load(f)
+                self.active = data.get('active', False)
+                self.queries = data.get('queries', {})
+                
+                # Ensure existing queries have first_run set to False
+                for qid in self.queries:
+                    if 'first_run' not in self.queries[qid]:
+                        self.queries[qid]['first_run'] = False
+                    
+                self.known_items = {k: set(v) for k,v in data.get('known_items', {}).items()}
+        except FileNotFoundError:
+            pass
+
+    def monitor_loop(self):
+        print("\n=== Monitoring thread started ===")
         while True:
             try:
-                print(f"\nChecking eBay at {datetime.now()}")
-                results = self.search_items(keywords, filters)
-                
-                if results and 'itemSummaries' in results:
-                    items = results['itemSummaries']
-                    print(f"Found {len(items)} items")
+                print(f"\n[Monitor Loop] Active: {self.active}")
+                if self.active:
+                    print("[Monitor Loop] Starting check cycle")
+                    with self.lock:
+                        queries = list(self.queries.items())
                     
-                    for item in items:
-                        item_id = item['itemId']
+                    if not queries:
+                        print("[Monitor Loop] No active queries to check")
                         
-                        if item_id not in self.known_items:
-                            print("\n=== NEW ITEM FOUND ===")
-                            print(f"Title: {item['title']}")
-                            print(f"Price: {item['price']['value']} {item['price']['currency']}")
-                            print(f"Location: {item.get('itemLocation', 'N/A')}")
-                            print(f"Link: {item['itemWebUrl']}")
-                            print("=====================")
-                            
-                            if not first_run:
-                                self.send_notification(item)
-                            
-                            self.known_items.add(item_id)
-                            self.item_details[item_id] = {
-                                'title': item['title'],
-                                'price': item['price'],
-                                'condition': item.get('condition', 'N/A'),
-                                'url': item['itemWebUrl'],
-                                'location': item.get('itemLocation', 'N/A')
-                            }
-                            self.save_known_items()
-                            self.save_item_details()
-                
-                    print(f"Total known items: {len(self.known_items)}")
-                
-                time.sleep(check_interval)
-                
+                    for query_id, config in queries:
+                        print(f"\n[Checking Query] ID: {query_id}")
+                        print(f"Keywords: {config['keywords']}")
+                        print(f"Filters: {config.get('filters', {})}")
+                        self._check_query(query_id, config)
+                    
+                    print("[Monitor Loop] Cycle completed")
+                    time.sleep(60)
+                else:
+                    print("[Monitor Loop] Inactive, sleeping...")
+                    time.sleep(5)
+                    
             except Exception as e:
-                print(f"Error occurred: {str(e)}")
-                time.sleep(check_interval)
+                print(f"\n!!! Monitor loop crashed !!!")
+                print(f"Error Type: {type(e).__name__}")
+                print(f"Error Message: {str(e)}")
+                print(traceback.format_exc())
+                time.sleep(30)
+
+    def _check_query(self, query_id, config):
+        try:
+            print(f"\n=== Checking query: {config['keywords']} ===")
+            results = self.search_items(config['keywords'], config.get('filters'))
+            
+            if not results:
+                return
+            
+            items = results.get('itemSummaries', [])
+            new_items = [
+                item for item in items
+                if item['itemId'] not in self.known_items.get(query_id, set())
+            ]
+            
+            if config['first_run']:
+                print("First run - recording items without notification")
+                with self.lock:
+                    self.known_items[query_id].update(item['itemId'] for item in items)
+                    self.queries[query_id]['first_run'] = False
+                    self._save_queries()
+            else:
+                if new_items:
+                    print(f"New items found: {len(new_items)}")
+                    self._send_notifications(query_id, new_items)
+                    with self.lock:
+                        self.known_items[query_id].update(item['itemId'] for item in new_items)
+                        self._save_queries()
+                    
+        except Exception as e:
+            print(f"Query check failed: {str(e)}")
+
+    def _refresh_token(self):
+        """Refresh token and update headers"""
+        self.token_timestamp = time.time()
+        self.token_expiry = 7200  # 2 hours in seconds
+        self.headers["Authorization"] = f"Bearer {self._get_access_token()}"
+
+    def _build_filter_string(self, filters):
+        """Construct eBay API filter string from our filters"""
+        filter_parts = []
+        
+        # Price filter
+        price_filter = []
+        if filters:
+            if filters.get('min_price'):
+                price_filter.append(f"{filters['min_price']}")
+            else:
+                price_filter.append("")
+            
+            if filters.get('max_price'):
+                price_filter.append(f"{filters['max_price']}")
+            else:
+                price_filter.append("")
+        
+        if any(price_filter):
+            filter_parts.append(f"price:[{'..'.join(price_filter)}]")
+        
+        # Condition filter
+        if filters and filters.get('condition'):
+            filter_parts.append(f"conditionIds:{{{filters['condition']}}}")
+        
+        # Location and currency
+        filter_parts.append("itemLocationCountry:GB")
+        filter_parts.append("priceCurrency:GBP")
+        
+        return ','.join(filter_parts)
+
+    def _send_notifications(self, query_id, items):
+        try:
+            if not self.telegram_token or not self.telegram_chat_id:
+                print("Telegram credentials missing - skipping notifications")
+                return
+            
+            print(f"Sending notifications for {len(items)} items")
+            
+            # Get query details
+            query = self.queries[query_id]
+            base_url = "https://www.ebay.co.uk/itm/"
+            
+            for item in items:
+                try:
+                    message = (
+                        f"🏷️ *New Item Alert* 🚨\n"
+                        f"*Title*: {item['title']}\n"
+                        f"*Price*: £{item['price']['value']}\n"
+                        f"*Condition*: {item.get('condition', 'N/A')}\n"
+                        f"[View Item]({base_url}{item['itemId']})"
+                    )
+                    
+                    # Send Telegram message
+                    requests.post(
+                        f"https://api.telegram.org/bot{self.telegram_token}/sendMessage",
+                        json={
+                            'chat_id': self.telegram_chat_id,
+                            'text': message,
+                            'parse_mode': 'Markdown'
+                        }
+                    )
+                    print(f"Notification sent for item {item['itemId']}")
+                    
+                except Exception as e:
+                    print(f"Failed to send notification: {str(e)}")
+        except Exception as e:
+            print(f"Notification error: {str(e)}")
+
+    def _update_rate_limit(self):
+        time_since_last = time.time() - self.last_request_time
+        if time_since_last < 0.5:  # 2 requests per second
+            time.sleep(0.5 - time_since_last)
+        self.last_request_time = time.time()
