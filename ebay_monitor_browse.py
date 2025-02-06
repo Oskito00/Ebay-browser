@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class EbayMonitor:
-    def __init__(self):
+    def __init__(self, instance_name="default"):
         self.client_id = os.getenv('EBAY_CLIENT_ID')
         self.client_secret = os.getenv('EBAY_CLIENT_SECRET')
         self.base_url = "https://api.ebay.com/buy/browse/v1"
@@ -19,8 +19,9 @@ class EbayMonitor:
             "X-EBAY-C-ENDUSERCTX": "contextualLocation=country=GB",
             "Content-Type": "application/json"
         }
-        self.known_items_file = "known_items.json"
-        self.item_details_file = "item_details.json"
+        self.instance_name = instance_name
+        self.known_items_file = f"known_items_{instance_name}.json"
+        self.item_details_file = f"item_details_{instance_name}.json"
         self.known_items = self.load_known_items()
         self.item_details = self.load_item_details()
         self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -111,18 +112,21 @@ class EbayMonitor:
                 if not results.get('itemSummaries'):
                     break
                     
-                # Get required keywords from filters, default to ['pokemon', 'pokémon'] if not provided
-                required_keywords = filters.get('required_keywords', ['pokemon', 'pokémon']) if filters else ['pokemon', 'pokémon']
+                # Get required keywords from filters
+                required_keywords = filters.get('required_keywords') if filters else None
                 
                 # Define exclusion keywords
-                exclusion_keywords = ['sun', 'moon', 'scarlet', 'violet']
+                exclusion_keywords = []
                 
-                # Post-process to filter items that contain required keywords but not exclusion keywords
-                filtered_items = [
-                    item for item in results['itemSummaries']
-                    if any(keyword.lower() in item['title'].lower() for keyword in required_keywords)
-                    and not any(ex_keyword.lower() in item['title'].lower() for ex_keyword in exclusion_keywords)
-                ]
+                if required_keywords:
+                    # Post-process to filter items that contain required keywords but not exclusion keywords
+                    filtered_items = [
+                        item for item in results['itemSummaries']
+                        if any(keyword.lower() in item['title'].lower() for keyword in required_keywords)
+                        and not any(ex_keyword.lower() in item['title'].lower() for ex_keyword in exclusion_keywords)
+                    ]
+                else:
+                    filtered_items = results['itemSummaries']
 
                 print(f"Found {len(filtered_items)} items matching required keywords: {required_keywords}")
                 print(f"(Excluded items containing: {exclusion_keywords})")

@@ -3,6 +3,7 @@ from ebay_monitor_browse import EbayMonitor
 import threading
 import os
 from dotenv import load_dotenv
+import argparse
 
 # Load environment variables
 load_dotenv()
@@ -39,7 +40,7 @@ def start_monitor():
         return jsonify({'status': 'error', 'message': 'Monitor already running'})
     
     stop_flag = False
-    monitor = EbayMonitor()
+    monitor = EbayMonitor(instance_name=args.instance_name)
     
     # Reset known items and item details
     monitor.known_items = set()
@@ -76,6 +77,27 @@ def stop_monitor():
     return jsonify({'status': 'error', 'message': 'No monitor running'})
 
 if __name__ == '__main__':
+    # Setup argument parser
+    parser = argparse.ArgumentParser(description='eBay Monitor')
+    parser.add_argument('--port', type=int, default=5001,
+                      help='Port number (default: 5001)')
+    parser.add_argument('--telegram-token', type=str,
+                      help='Telegram Bot Token')
+    parser.add_argument('--telegram-chat', type=str,
+                      help='Telegram Chat ID')
+    parser.add_argument('--instance-name', type=str, default="default",
+                      help='Unique instance name for separate file storage')
+    args = parser.parse_args()
+
+    # Load environment variables
+    load_dotenv()
+
+    # Override with command line arguments if provided
+    if args.telegram_token:
+        os.environ['TELEGRAM_BOT_TOKEN'] = args.telegram_token
+    if args.telegram_chat:
+        os.environ['TELEGRAM_CHAT_ID'] = args.telegram_chat
+
     required_vars = [
         'EBAY_CLIENT_ID', 
         'EBAY_CLIENT_SECRET',
@@ -89,5 +111,6 @@ if __name__ == '__main__':
         for var in missing_vars:
             print(f"- {var}")
         exit(1)
-        
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+    
+    port = args.port
+    app.run(host='0.0.0.0', port=port, debug=True)
