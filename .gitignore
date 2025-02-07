@@ -2,4 +2,4 @@
 __pycache__/
 known_items.json
 item_details.json
-.venv/
+venv/
