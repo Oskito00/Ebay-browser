@@ -1,0 +1,16 @@
+{
+  "queries": {
+    "uuid-123": {
+      "keywords": "vintage camera",
+      "filters": {
+        "min_price": 50,
+        "max_price": 200,
+        "condition": "USED"
+      },
+      "created": "2023-07-20T12:00:00"
+    }
+  },
+  "known_items": {
+    "uuid-123": ["123456789", "987654321"]
+  }
+}

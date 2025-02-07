@@ -1,146 +1,177 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>eBay Monitor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eBay Monitor Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.css" rel="stylesheet" />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+        .status-indicator {
+            padding: 8px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
         }
-        .form-group {
-            margin-bottom: 15px;
+
+        .query-item {
+            transition: all 0.2s ease;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
+
+        .query-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        input, select {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        small {
-            color: #666;
-            font-size: 0.8em;
-            margin-top: 4px;
-            display: block;
+
+        .filter-accordion {
+            transition: background-color 0.2s ease;
         }
     </style>
 </head>
-<body>
-    <h1>eBay Item Monitor</h1>
-    
-    <div class="form-group">
-        <label for="search_term">Search Term:</label>
-        <input type="text" id="search_term" placeholder="iPhone 14 Pro">
-    </div>
-    
-    <div class="form-group">
-        <label for="required_keywords">Required Keywords (comma-separated):</label>
-        <input type="text" id="required_keywords" placeholder="pokemon, pokémon">
-        <small style="color: #666; font-size: 0.8em; margin-top: 4px; display: block;">
-            Items must contain at least one of these keywords in their title
-        </small>
-    </div>
-    
-    <div class="form-group">
-        <label for="check_interval">Check Interval (seconds):</label>
-        <input type="number" id="check_interval" value="60" min="30">
-    </div>
-    
-    <div class="form-group">
-        <label for="min_price">Minimum Price (£):</label>
-        <input type="number" id="min_price" placeholder="0" min="0" step="0.01">
-    </div>
-    
-    <div class="form-group">
-        <label for="max_price">Maximum Price (£):</label>
-        <input type="number" id="max_price" placeholder="1000" min="0" step="0.01">
-    </div>
-    
-    <div class="form-group">
-        <label for="condition">Condition:</label>
-        <select id="condition">
-            <option value="">Any</option>
-            <option value="NEW">New</option>
-            <option value="USED">Used</option>
-            <option value="VERY_GOOD">Very Good</option>
-            <option value="GOOD">Good</option>
-            <option value="ACCEPTABLE">Acceptable</option>
-        </select>
-    </div>
-    
-    <button onclick="startMonitor()">Start Monitor</button>
-    <button onclick="stopMonitor()" style="background-color: #f44336;">Stop Monitor</button>
-    
-    <div id="status"></div>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">eBay Monitor</h1>
+            <div class="flex items-center gap-4">
+                <div class="status-indicator flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span class="text-gray-600">Not Monitoring</span>
+                </div>
+                <button id="toggleMonitor" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+                    Start Monitoring
+                </button>
+            </div>
+        </div>
 
+        <!-- Query Form -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Add New Query</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Search Keywords</label>
+                    <input type="text" id="keywords" class="w-full p-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Marketplace</label>
+                    <select id="marketplace" class="w-full p-2 border rounded-lg">
+                        <option value="EBAY-GB">UK</option>
+                        <option value="EBAY-US">US</option>
+                        <option value="EBAY-DE">Germany</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filters Accordion -->
+            <div class="mt-4 space-y-4">
+                <div class="border rounded-lg">
+                    <button type="button" class="filter-accordion w-full p-4 text-left bg-gray-50">
+                        Advanced Filters
+                    </button>
+                    <div class="filter-content hidden p-4 space-y-4">
+                        <!-- Price Range -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Minimum Price</label>
+                                <input type="number" id="minPrice" class="w-full p-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Maximum Price</label>
+                                <input type="number" id="maxPrice" class="w-full p-2 border rounded-lg">
+                            </div>
+                        </div>
+
+                        <!-- Keywords -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Required Keywords</label>
+                            <input type="text" id="requiredKeywords" class="w-full p-2 border rounded-lg" 
+                                   placeholder="Comma-separated words that must be in title">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Exclude Keywords</label>
+                            <input type="text" id="excludeKeywords" class="w-full p-2 border rounded-lg" 
+                                   placeholder="Comma-separated words to exclude">
+                        </div>
+
+                        <!-- Condition -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Condition</label>
+                            <select id="condition" class="w-full p-2 border rounded-lg">
+                                <option value="">Any Condition</option>
+                                <option value="NEW">New</option>
+                                <option value="USED">Used</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="addQuery()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                Add Query
+            </button>
+        </div>
+
+        <!-- Active Queries -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Active Queries</h2>
+            <div id="queriesList" class="space-y-4">
+                <!-- Queries will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
     <script>
-        function startMonitor() {
-            const searchTerm = document.getElementById('search_term').value || 'iPhone 14 Pro';
-            const checkInterval = document.getElementById('check_interval').value || 20;
-            const minPrice = document.getElementById('min_price').value;
-            const maxPrice = document.getElementById('max_price').value;
-            const condition = document.getElementById('condition').value;
-            const requiredKeywords = document.getElementById('required_keywords').value;
-
-            
-            const data = {
-                search_term: searchTerm,
-                check_interval: checkInterval
-            };
-            
-            if (minPrice) data.min_price = minPrice;
-            if (maxPrice) data.max_price = maxPrice;
-            if (condition) data.condition = condition;
-            if (requiredKeywords) {
-                // Split by commas and trim whitespace from each keyword
-                data.required_keywords = requiredKeywords.split(',').map(k => k.trim());
-            }
-            
-            fetch('/start', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').innerHTML = data.message;
-                document.getElementById('status').style.backgroundColor = 
-                    data.status === 'success' ? '#dff0d8' : '#f2dede';
+        // Accordion functionality
+        document.querySelectorAll('.filter-accordion').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                content.classList.toggle('hidden');
+                button.classList.toggle('bg-gray-100');
             });
+        });
+
+        // Query List Management
+        async function loadQueries() {
+            const response = await fetch('/queries');
+            const queries = await response.json();
+            const container = document.getElementById('queriesList');
+            
+            container.innerHTML = queries.map(query => `
+                <div class="query-item border rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="font-medium">${query.keywords}</h3>
+                            <div class="text-sm text-gray-500">
+                                ${query.filters.minPrice ? `£${query.filters.minPrice} - ` : ''}
+                                ${query.filters.maxPrice ? `£${query.filters.maxPrice}` : ''}
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="text-red-500 hover:text-red-700" onclick="removeQuery('${query.id}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function stopMonitor() {
-            fetch('/stop', {
+        // Control Monitoring
+        async function toggleMonitoring() {
+            const button = document.getElementById('toggleMonitor');
+            const action = button.textContent.includes('Start') ? 'start' : 'stop';
+            
+            await fetch('/control', {
                 method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').innerHTML = data.message;
-                document.getElementById('status').style.backgroundColor = 
-                    data.status === 'success' ? '#dff0d8' : '#f2dede';
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action})
             });
+            
+            loadQueries();
         }
+
+        // Initial load
+        loadQueries();
     </script>
 </body>
 </html> 
