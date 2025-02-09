@@ -97,4 +97,24 @@ class EbayAPI:
         if 'condition' in filters:
             filter_parts.append(f"conditionIds:{{{','.join(filters['condition'])}}}")
         
-        return ','.join(filter_parts) 
+        return ','.join(filter_parts)
+
+def build_ebay_params(query):
+    params = {
+        'keywords': query.keywords,
+        'sortOrder': 'PricePlusShippingLowest',
+        'limit': query.limit
+    }
+    
+    if query.filters:
+        if 'min_price' in query.filters:
+            params['minPrice'] = query.filters['min_price']
+        if 'max_price' in query.filters:
+            params['maxPrice'] = query.filters['max_price']
+        if 'condition' in query.filters:
+            params['itemFilter'] = [{
+                'name': 'Condition',
+                'value': query.filters['condition']
+            }]
+    
+    return params 

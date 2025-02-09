@@ -7,8 +7,8 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256))
     telegram_chat_id = db.Column(db.String(50))
     telegram_notifications_enabled = db.Column(db.Boolean, default=False)
     notification_preferences = db.Column(db.JSON, default={
@@ -20,7 +20,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
     
-    queries = db.relationship('Query', backref='user', lazy=True)
+    queries = db.relationship('Query', backref='user', lazy='dynamic')
 
     def get_id(self):
         return str(self.id)
@@ -34,8 +34,8 @@ class User(UserMixin, db.Model):
 class Query(db.Model):
     __tablename__ = 'queries'
     
-    id = db.Column(db.String(36), primary_key=True)  # UUID
-    keywords = db.Column(db.String(128), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    keywords = db.Column(db.String(255), nullable=False)
     filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
     check_interval = db.Column(db.Integer, default=60)  # Seconds
     is_active = db.Column(db.Boolean, default=False)
@@ -64,4 +64,4 @@ class Item(db.Model):
     price_history = db.Column(db.JSON, default=[])  # Store historical prices
     last_price_change = db.Column(db.DateTime)
     
-    query_id = db.Column(db.String(36), db.ForeignKey('queries.id'), nullable=False) 
+    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False) 

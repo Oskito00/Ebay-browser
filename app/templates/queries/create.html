@@ -3,6 +3,8 @@
 {% block content %}
 <h1>New Search</h1>
 <form method="POST">
+    {{ form.hidden_tag() }}
+    
     <div class="form-group">
         <label for="keywords">Search Keywords:</label>
         <input type="text" id="keywords" name="keywords" required>
@@ -12,6 +14,21 @@
         <label for="threshold">Price Alert Threshold (%):</label>
         <input type="number" id="threshold" name="threshold" 
                step="0.1" min="0" max="100" value="5.0" required>
+    </div>
+    
+    <div class="form-group">
+        {{ form.min_price.label }}
+        {{ form.min_price(class="form-control") }}
+    </div>
+    
+    <div class="form-group">
+        {{ form.max_price.label }}
+        {{ form.max_price(class="form-control") }}
+    </div>
+    
+    <div class="form-group">
+        {{ form.condition.label }}
+        {{ form.condition(class="form-control") }}
     </div>
     
     <button type="submit" class="btn-save">Create Search</button>

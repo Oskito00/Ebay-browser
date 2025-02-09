@@ -1,6 +1,9 @@
 from flask import Flask
 from app.extensions import db, migrate, login_manager, csrf, encryptor
 from config import Config
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect()
 
 def create_app(config_class=Config):
     app = Flask(__name__)

@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Edit Search</h1>
 <form method="POST">
+    {{ form.hidden_tag() }}  <!-- Add this line -->
     <div class="form-group">
         <label for="keywords">Search Keywords:</label>
         <input type="text" id="keywords" name="keywords" 

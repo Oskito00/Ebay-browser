@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request
 from flask_login import login_required, current_user
 from app.models import Query, db
+from app.forms import QueryForm  # Create this form if needed
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -14,14 +15,14 @@ def manage_queries():
 @login_required
 def edit_query(query_id):
     query = Query.query.get_or_404(query_id)
+    form = QueryForm(obj=query)  # Populate form from query object
     
-    if request.method == 'POST':
-        query.keywords = request.form['keywords']
-        query.price_alert_threshold = float(request.form.get('threshold', 5.0))
+    if form.validate_on_submit():
+        form.populate_obj(query)  # Update query from form data
         db.session.commit()
         return redirect(url_for('queries.manage_queries'))
-    
-    return render_template('queries/edit.html', query=query)
+        
+    return render_template('queries/edit.html', form=form, query=query)
 
 @bp.route('/<int:query_id>/delete', methods=['POST'])
 @login_required
@@ -34,13 +35,23 @@ def delete_query(query_id):
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_query():
-    if request.method == 'POST':
+    form = QueryForm()
+    if form.validate_on_submit():
+        filters = {
+            'min_price': form.min_price.data,
+            'max_price': form.max_price.data,
+            'condition': form.condition.data,
+            'check_interval': form.check_interval.data * 60  # Convert to seconds
+        }
+        
         query = Query(
-            keywords=request.form['keywords'],
-            price_alert_threshold=float(request.form['threshold']),
+            keywords=form.keywords.data,
+            filters=filters,
             user_id=current_user.id
         )
+        
         db.session.add(query)
         db.session.commit()
         return redirect(url_for('queries.manage_queries'))
-    return render_template('queries/create.html') 
+    
+    return render_template('queries/create.html', form=form) 

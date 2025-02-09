@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="home-content">
+    <h1>Welcome to Ebay Monitor</h1>
+    
+    {% if current_user.is_authenticated %}
+        <p>You are logged in as {{ current_user.email }}</p>
+        <a href="{{ url_for('queries.manage_queries') }}" class="button">
+            Manage Your Searches
+        </a>
+    {% else %}
+        <p>Track prices and get alerts for eBay items</p>
+        <div class="auth-options">
+            <a href="{{ url_for('auth.register') }}" class="button">
+                Create Free Account
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="button secondary">
+                Existing User Login
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

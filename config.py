@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env file
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-123')
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-random-secret-key-here'
     SQLALCHEMY_DATABASE_URI = 'postgresql://ebay_user:secure_password@localhost/ebay_monitor'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     EBAY_CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
