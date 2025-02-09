@@ -1,21 +1,21 @@
-from app.ebay.api import EbayAPI
-from app.ebay.constants import CONDITIONS
-from app.models import Query, Item
+import logging
+from app.monitor.service import MonitoringService
+from app import app
 
-def check_query(query_id):
-    query = Query.query.get(query_id)
-    
-    # Convert human-readable conditions to eBay IDs
-    ebay_conditions = [CONDITIONS[c] for c in query.filters.get('conditions', [])]
-    
-    api = EbayAPI()
-    results = api.search_items(
-        query.keywords,
-        filters={
-            'min_price': query.filters.get('min_price'),
-            'max_price': query.filters.get('max_price'),
-            'condition': ebay_conditions
-        }
-    )
-    
-    # Process results... 
+logger = logging.getLogger(__name__)
+
+def start_monitoring():
+    """Main entry point for executing monitoring checks"""
+    with app.app_context():
+        try:
+            logger.info("Starting monitoring checks...")
+            
+            # Initialize and run monitoring service
+            service = MonitoringService()
+            service.run_checks()
+            
+            logger.info("Monitoring checks completed successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Monitoring failed: {str(e)}", exc_info=True)
+            return False

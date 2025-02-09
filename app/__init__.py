@@ -1,18 +1,28 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from app.extensions import db, migrate, login_manager, csrf, encryptor
+from config import Config
 
-db = SQLAlchemy()
-migrate = Migrate()
-
-def create_app(config_class='config.Config'):
+def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
+    # Verify configuration
+    config_class.verify()
+    
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    encryptor.init_app(app)
     
-    # Add this after db initialization
-    from app import models  # Import models after db is initialized
+    # Import models after extensions to avoid circular imports
+    from app.models import User
+    
+    # Register blueprints
+    from app.routes.telegram import bp as telegram_bp
+    from app.routes.auth import bp as auth_bp
+    app.register_blueprint(telegram_bp)
+    app.register_blueprint(auth_bp)
     
     return app 

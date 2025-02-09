@@ -1,6 +1,8 @@
 import os
 import requests
 from datetime import datetime, timedelta
+from flask import current_app
+import time
 
 class EbayAPI:
     def __init__(self):
@@ -33,7 +35,8 @@ class EbayAPI:
         self.token = token_data['access_token']
         self.token_expiry = datetime.utcnow() + timedelta(seconds=token_data['expires_in'])
     
-    def search_items(self, keywords, filters=None):
+    def search(self, keywords, filters=None, limit=200, offset=0):
+        """Search with pagination support"""
         headers = self._get_auth_header()
         headers.update({
             'X-EBAY-C-MARKETPLACE-ID': 'EBAY_GB',
@@ -43,38 +46,55 @@ class EbayAPI:
         params = {
             'q': keywords,
             'sort': 'newlyListed',
-            'limit': 200
+            'limit': limit,
+            'offset': offset,
+            'fieldgroups': 'FULL'
         }
         
-        # Add filters
         if filters:
             filter_str = self._build_filter(filters)
             if filter_str:
                 params['filter'] = filter_str
         
-        response = requests.get(
-            f"{self.base_url}/item_summary/search",
-            headers=headers,
-            params=params
-        )
-        
-        return response.json()
+        MAX_RETRIES = 3
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = requests.get(
+                    f"{self.base_url}/item_summary/search",
+                    headers=headers,
+                    params=params
+                )
+                if response.status_code == 429:
+                    sleep_time = int(response.headers.get('Retry-After', 60))
+                    time.sleep(sleep_time)
+                    continue
+                response.raise_for_status()
+                return {
+                    'total': response.json().get('total', 0),
+                    'itemSummaries': response.json().get('itemSummaries', [])
+                }
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429:
+                    continue
+                raise
     
     def _build_filter(self, filters):
+        """Convert filters to eBay API filter string"""
         filter_parts = []
         
-        # Price filter
-        if filters.get('min_price') or filters.get('max_price'):
+        # Price range
+        if 'min_price' in filters or 'max_price' in filters:
             price_filter = 'price:['
-            if filters.get('min_price'):
-                price_filter += f"{filters['min_price']}.."
-            if filters.get('max_price'):
+            if 'min_price' in filters:
+                price_filter += f"{filters['min_price']}"
+            price_filter += '..'
+            if 'max_price' in filters:
                 price_filter += f"{filters['max_price']}"
             price_filter += ']'
             filter_parts.append(price_filter)
         
-        # Condition filter
-        if filters.get('condition'):
+        # Condition
+        if 'condition' in filters:
             filter_parts.append(f"conditionIds:{{{','.join(filters['condition'])}}}")
         
         return ','.join(filter_parts) 
