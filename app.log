@@ -1,0 +1,99 @@
+2025-02-09 19:04:06,815 ERROR: Exception on /queries/9/delete [POST] [in /Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask/app.py:825]
+Traceback (most recent call last):
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1970, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column items.last_seen does not exist
+LINE 1: ...AS items_url, items.image_url AS items_image_url, items.last...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask/app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask/app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask/app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask/app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/app/routes/queries.py", line 40, in delete_query
+    db.session.commit()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/scoping.py", line 597, in commit
+    return self._proxied.commit()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 1972, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 1257, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 1232, in _prepare_impl
+    self.session.flush()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 4296, in flush
+    self._flush(objects)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 4432, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 4392, in _flush
+    flush_context.execute()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/unitofwork.py", line 442, in execute
+    postsort_actions = self._generate_actions()
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/unitofwork.py", line 400, in _generate_actions
+    if action.execute(self):
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/unitofwork.py", line 532, in execute
+    self.dependency_processor.presort_deletes(uow, delete_states)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/dependency.py", line 450, in presort_deletes
+    history = uowcommit.get_attribute_history(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/unitofwork.py", line 283, in get_attribute_history
+    history = impl.get_history(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/attributes.py", line 1679, in get_history
+    current = self.get(state, dict_, passive=passive)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/attributes.py", line 1121, in _fire_loader_callables
+    return self.callable_(state, passive)
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/strategies.py", line 967, in _load_for_state
+    return self._emit_lazyload(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/strategies.py", line 1130, in _emit_lazyload
+    result = session.execute(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 2306, in execute
+    return self._execute_internal(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/session.py", line 2191, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1421, in execute
+    return meth(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/sql/elements.py", line 514, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1849, in _execute_context
+    return self._exec_single_context(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1989, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 2356, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/base.py", line 1970, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/oscaralberigo/Desktop/CDING/EbayApp/venv/lib/python3.9/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column items.last_seen does not exist
+LINE 1: ...AS items_url, items.image_url AS items_image_url, items.last...
+                                                             ^
+
+[SQL: SELECT items.ebay_id AS items_ebay_id, items.title AS items_title, items.price AS items_price, items.url AS items_url, items.image_url AS items_image_url, items.last_seen AS items_last_seen, items.query_id AS items_query_id 
+FROM items 
+WHERE %(param_1)s = items.query_id]
+[SQL parameters hidden due to hide_parameters=True]
+(Background on this error at: https://sqlalche.me/e/20/f405)

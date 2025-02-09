@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()  # Load .env file
 
@@ -15,7 +16,12 @@ class Config:
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
     WTF_CSRF_ENABLED = True  # Should be True in production
     WTF_CSRF_SECRET_KEY = os.getenv('CSRF_SECRET_KEY', 'fallback-secret-key')
-    SQLALCHEMY_ECHO = True  # Show all SQL queries
+    SQLALCHEMY_ECHO = False  # Disable raw SQL logging
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'echo_pool': False,
+        'hide_parameters': True
+    }
+    LOG_LEVEL = logging.WARNING
 
     @classmethod
     def verify(cls):

@@ -1,10 +1,12 @@
 import os
+from venv import logger
 import requests
 from datetime import datetime, timedelta
 from flask import current_app
 import time
 from .constants import CONDITION_IDS
-from app.models import Item
+from app.models import Item, Result
+from app import db
 
 class EbayAPI:
     def __init__(self):
@@ -175,6 +177,50 @@ def parse_ebay_response(response, query_id):
             last_updated=datetime.utcnow()
         ))
     return items 
+
+def execute_search(query):
+    try:
+        api = EbayAPI()
+        response = api.search(
+            keywords=query.keywords,
+            filters={
+                'min_price': query.min_price,
+                'max_price': query.max_price,
+                'condition': query.conditions
+            }
+        )
+        
+        # Process response
+        current_items = api.parse_response(response, query.id)
+        previous_items = get_previous_items(query)
+        new_items = identify_new_items(previous_items, current_items)
+        
+        # Store results
+        save_results(query, current_items, new_items)
+        return new_items
+        
+    except Exception as e:
+        logger.error(f"Search failed for query {query.id}: {str(e)}")
+        return []
+
+def get_previous_items(query):
+    if not query.results:
+        return []
+    return query.results[-1].items
+
+def identify_new_items(previous, current):
+    prev_ids = {item.ebay_id for item in previous}
+    return [item for item in current if item.ebay_id not in prev_ids]
+
+def save_results(query, items, new_items):
+    result = Result(
+        query=query,
+        items=items,
+        new_items=new_items
+    )
+    db.session.add(result)
+    query.last_checked = datetime.utcnow()
+    db.session.commit()
 
 __all__ = ['EbayAPI', 'parse_ebay_response']
 
