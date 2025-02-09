@@ -43,6 +43,7 @@ class Query(db.Model):
     last_checked = db.Column(db.DateTime)
     limit = db.Column(db.Integer, default=200)
     total_items = db.Column(db.Integer)  # Track total found
+    price_alert_threshold = db.Column(db.Float, default=5.0)  # Percentage threshold
     
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('Item', backref='query', lazy=True)

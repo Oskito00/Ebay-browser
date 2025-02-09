@@ -20,9 +20,13 @@ def create_app(config_class=Config):
     from app.models import User
     
     # Register blueprints
-    from app.routes.telegram import bp as telegram_bp
     from app.routes.auth import bp as auth_bp
-    app.register_blueprint(telegram_bp)
     app.register_blueprint(auth_bp)
+
+    from app.routes.main import bp as main_bp
+    app.register_blueprint(main_bp)
+
+    from app.routes.queries import bp as queries_bp
+    app.register_blueprint(queries_bp)
     
     return app 

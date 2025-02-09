@@ -90,16 +90,24 @@ class MonitoringService:
 
     def handle_price_change(self, item, new_price):
         old_price = item.price
+        percent_change = abs((new_price - old_price) / old_price) * 100
+        
+        if percent_change >= item.query.price_alert_threshold:
+            self.send_price_alert(item, old_price, new_price)
+        
         item.price = new_price
         item.price_history.append({
             'old_price': float(old_price),
             'new_price': float(new_price),
             'timestamp': datetime.utcnow().isoformat()
         })
+
+    def send_price_alert(self, item, old_price, new_price):
         NotificationManager.send_price_alert(
             user=item.query.user,
             item=item,
-            old_price=old_price
+            old_price=old_price,
+            new_price=new_price
         )
 
     def handle_new_item(self, query, item_data):

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Your Saved Searches</h1>
+<a href="{{ url_for('queries.create_query') }}" class="button">New Search</a>
+
+<table class="queries-table">
+    <thead>
+        <tr>
+            <th>Keywords</th>
+            <th>Alert Threshold</th>
+            <th>Last Checked</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for query in queries %}
+        <tr>
+            <td>{{ query.keywords }}</td>
+            <td>{{ query.price_alert_threshold }}%</td>
+            <td>{{ query.last_checked|datetimeformat if query.last_checked else 'Never' }}</td>
+            <td class="actions">
+                <a href="{{ url_for('queries.edit_query', query_id=query.id) }}" class="btn-edit">Edit</a>
+                <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.id) }}">
+                    <button type="submit" class="btn-delete">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4">No saved searches yet. <a href="{{ url_for('queries.create_query') }}">Create one</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
