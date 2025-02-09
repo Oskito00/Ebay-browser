@@ -41,4 +41,7 @@ class QueryForm(FlaskForm):
     check_interval = IntegerField('Check Every (minutes)', validators=[
         NumberRange(min=15, max=1440)
     ])
-    submit = SubmitField('Save') 
+    submit = SubmitField('Save')
+
+class DeleteForm(FlaskForm):
+    submit = SubmitField('Delete') 

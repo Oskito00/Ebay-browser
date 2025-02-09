@@ -22,7 +22,8 @@
             <td class="actions">
                 <a href="{{ url_for('queries.edit_query', query_id=query.id) }}" class="btn-edit">Edit</a>
                 <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.id) }}">
-                    <button type="submit" class="btn-delete">Delete</button>
+                    {{ delete_form.hidden_tag() }}
+                    {{ delete_form.submit(class="btn-delete") }}
                 </form>
             </td>
         </tr>
