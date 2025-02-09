@@ -7,9 +7,11 @@ CONDITION_IDS = {
 }
 
 MARKETPLACE_IDS = {
-    'US': 'EBAY_US',
-    'GB': 'EBAY_GB',
-    'AU': 'EBAY_AU'
+    'EBAY_GB': {'currency': 'GBP', 'country': 'UK'},
+    'EBAY_US': {'currency': 'USD', 'country': 'US'},
+    'EBAY_DE': {'currency': 'EUR', 'country': 'DE'},
+    'EBAY_IT': {'currency': 'EUR', 'country': 'IT'},
+    'EBAY_AU': {'currency': 'AUD', 'country': 'AU'}
 }
 
 __all__ = ['CONDITION_IDS', 'MARKETPLACE_IDS']  # Explicit exports 

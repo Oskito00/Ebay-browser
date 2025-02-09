@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField, SelectMultipleField, DecimalField
 from wtforms.validators import DataRequired, Email, EqualTo, NumberRange, Optional, InputRequired
 from flask_wtf.csrf import CSRFProtect
+from app.ebay.constants import MARKETPLACE_IDS
 
 csrf = CSRFProtect()
 
@@ -37,6 +38,7 @@ class QueryForm(FlaskForm):
         'Check Every (minutes)', 
         validators=[InputRequired(), NumberRange(min=1, max=1440)]
     )
+    marketplace = SelectField('Marketplace', choices=[(key, value) for key, value in MARKETPLACE_IDS.items()], default='UK')
     submit = SubmitField('Save Search')
 
 class DeleteForm(FlaskForm):

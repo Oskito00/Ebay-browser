@@ -25,3 +25,4 @@ pytest-mock==3.12.0
 # Optional (remove if not needed)
 flask-restful==0.3.10  # For API endpoints
 flask-apscheduler==1.13.1  # Alternative to Celery
+requests-mock==1.11.0

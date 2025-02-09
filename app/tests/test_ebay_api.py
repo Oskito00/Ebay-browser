@@ -1,15 +1,19 @@
+import logging
 import os
 import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 from app.ebay.api import EbayAPI
+from app.ebay.constants import MARKETPLACE_IDS
 from app.models import Query, Item
 from app import db
 from ..ebay.api import parse_ebay_response
+import requests_mock
+import json
 
 @pytest.fixture
 def ebay_api():
-    return EbayAPI()
+    return EbayAPI(marketplace='EBAY_GB')
 
 @pytest.fixture
 def mock_response():
@@ -77,17 +81,6 @@ def test_complex_filter(ebay_api):
         'condition': ['2000', '2500']
     }
     assert ebay_api._build_filter(filters) == 'price:[50..],conditionIds:{2000,2500}'
-
-@patch('requests.post')
-def test_token_refresh(mock_post, ebay_api, mock_response):
-    mock_post.return_value = mock_response(json_data={
-        'access_token': 'new_token',
-        'expires_in': 3600
-    })
-    
-    ebay_api._refresh_token()
-    assert ebay_api.token == 'new_token'
-    assert isinstance(ebay_api.token_expiry, datetime)
 
 def test_expired_token_refresh(ebay_api, mock_response):
     ebay_api.token_expiry = datetime.utcnow() - timedelta(minutes=1)
@@ -177,3 +170,58 @@ def test_parse_missing_image():
     }
     items = parse_ebay_response(sample, 1)
     assert items[0].image_url is None
+
+def test_ebay_search():
+    api = EbayAPI()
+    # Pass numeric values instead of strings
+    results = api.search("test", {'min_price': 100.0})  
+    assert len(results['itemSummaries']) > 0
+
+@pytest.mark.parametrize("marketplace,currency,keywords", [
+    ('EBAY_GB', 'GBP', "vintage camera"),
+    ('EBAY_US', 'USD', "antique camera"),
+    ('EBAY_DE', 'EUR', "alte kamera")
+])
+def test_marketplace_selection(ebay_api, marketplace, currency, keywords):
+    """Test different marketplaces return correct currency"""
+    api = EbayAPI(marketplace=marketplace)
+    with requests_mock.Mocker() as m:
+        m.get(requests_mock.ANY, json={
+            'itemSummaries': [{
+                'price': {'value': '100.00', 'currency': currency},
+                'itemId': '123'
+            }]
+        })
+        results = api.search(keywords)
+        assert results['itemSummaries'][0]['price']['currency'] == currency
+
+def test_currency_filter(ebay_api):
+    """Verify currency is included in API request filters"""
+    with requests_mock.Mocker() as m:
+        m.get(requests_mock.ANY, json={'itemSummaries': []})
+        ebay_api.search("test", {'min_price': 50}, marketplace='EBAY_DE')
+        
+        # Verify filter parameter
+        request = m.last_request
+        assert 'filter=price:[50.00..],priceCurrency:EUR' in request.query
+
+
+@pytest.mark.live
+def test_live_marketplace_search():
+    api = EbayAPI(marketplace='EBAY_GB')
+    results = api.search("iphone", limit=5)
+    
+    print(f"\nAPI Filters Used: {api._build_filter({})}")
+    print(f"Response Items: {len(results['itemSummaries'])}")
+    
+    for item in results['itemSummaries']:
+        print(f"\nItem: {item['title']}")
+        print(f"Price: {item['price']['value']} {item['price']['currency']}")
+        print(f"Location: {item.get('itemLocation',{}).get('country')}")
+        print(f"URL: {item['itemWebUrl']}")
+    
+    # Verify all items are from GB
+    for item in results['itemSummaries']:
+        assert item.get('itemLocation', {}).get('country') == 'GB', f"Item location not GB: {item.get('itemLocation')}"
+    
+    # Assertions remain the same

@@ -27,6 +27,34 @@
         {{ form.max_price.label }}
         {{ form.max_price(class="form-control") }}
     </div>
+
+    <div class="filter-section">
+        <h3>Price Range (£)</h3>
+        <div class="price-filters">
+          <input type="number" id="minPrice" placeholder="Minimum price" min="0">
+          <span class="price-separator">to</span>
+          <input type="number" id="maxPrice" placeholder="Maximum price" min="0">
+        </div>
+      </div>
+      
+      <!-- Location Filters -->
+      <div class="filter-section">
+        <h3>Item Location</h3>
+        <select id="itemLocation" class="location-select">
+          <option value="GB" selected>United Kingdom</option>
+          <option value="US">United States</option>
+          <option value="EU">European Union</option>
+          <option value="WORLD">Worldwide</option>
+        </select>
+      </div>
+      
+      <div class="filter-section">
+        <h3>Seller Location</h3>
+        <select id="sellerLocation" class="location-select">
+          <option value="GB" selected>UK Sellers</option>
+          <option value="WORLD">International Sellers</option>
+        </select>
+      </div>
     
     <button type="submit" class="btn btn-primary" name="submit">Save Search</button>
     <a href="{{ url_for('queries.manage_queries') }}" class="btn-cancel">Cancel</a>
