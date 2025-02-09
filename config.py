@@ -7,8 +7,11 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-random-secret-key-here'
     SQLALCHEMY_DATABASE_URI = 'postgresql://ebay_user:secure_password@localhost/ebay_monitor'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    EBAY_ENV = os.getenv('EBAY_ENV', 'sandbox')
+    EBAY_API_URL = os.getenv('EBAY_API_URL')
     EBAY_CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
     EBAY_CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
+    EBAY_ACCESS_TOKEN = os.getenv('EBAY_ACCESS_TOKEN')
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 
     @classmethod
