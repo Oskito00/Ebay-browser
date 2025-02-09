@@ -32,4 +32,9 @@ def create_app(config_class=Config):
     from app.routes.queries import bp as queries_bp
     app.register_blueprint(queries_bp)
     
+    with app.app_context():
+        db.create_all()  # Ensure tables exist
+    
+    print("Current DB URI:", app.config['SQLALCHEMY_DATABASE_URI'])
+    
     return app 

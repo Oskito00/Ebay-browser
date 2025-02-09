@@ -2,13 +2,18 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 from app.models import Query, db
 from app.forms import QueryForm, DeleteForm  # Create this form if needed
+from decimal import Decimal
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
 @bp.route('/manage')
 @login_required
 def manage_queries():
-    queries = current_user.queries.order_by(Query.created_at.desc()).all()
+    print("Current user:", current_user)
+    queries = current_user.queries.all()
+    print("Queries found:", queries)
     delete_form = DeleteForm()
     return render_template('queries/manage.html', queries=queries, delete_form=delete_form)
 
@@ -39,23 +44,45 @@ def delete_query(query_id):
 @bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_query():
+    print("Current user authenticated:", current_user.is_authenticated)
     form = QueryForm()
+    if request.method == 'GET':
+        form.check_interval.data = 5  # Default to 1 hour
+    print("Form data:", form.data)
+    print("User ID:", current_user.id)
     if form.validate_on_submit():
-        filters = {
-            'min_price': form.min_price.data,
-            'max_price': form.max_price.data,
-            'condition': form.condition.data,
-            'check_interval': form.check_interval.data * 60  # Convert to seconds
-        }
-        
-        query = Query(
-            keywords=form.keywords.data,
-            filters=filters,
-            user_id=current_user.id
-        )
-        
-        db.session.add(query)
-        db.session.commit()
-        return redirect(url_for('queries.manage_queries'))
-    
+        print("Form keywords:", form.keywords.data)
+        print("Form check_interval:", form.check_interval.data)
+        print("Submit button pressed:", 'submit' in request.form)
+        print("Form submitted and validated")
+        print("Form check_interval type:", type(form.check_interval.data))
+        try:
+            min_price = float(form.min_price.data) if form.min_price.data else None
+            max_price = float(form.max_price.data) if form.max_price.data else None
+            query = Query(
+                keywords=form.keywords.data,
+                min_price=Decimal(str(min_price)) if min_price else None,
+                max_price=Decimal(str(max_price)) if max_price else None,
+                check_interval=form.check_interval.data,
+                user_id=current_user.id
+            )
+            print("Query object:", query.__dict__)  # Before add
+            db.session.add(query)
+            db.session.commit()
+            print("Query after commit:", query.id)  # Should have ID
+            flash('Search query created!', 'success')
+            inspector = inspect(db.engine)
+            print("Tables in DB:", inspector.get_table_names())
+            print("Query table exists:", 'queries' in inspector.get_table_names())
+            try:
+                test_query = Query.query.first()
+                print("Test query from DB:", test_query)
+            except OperationalError as e:
+                print("DB Read Error:", str(e))
+            return redirect(url_for('queries.manage_queries'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error creating query: ' + str(e), 'danger')
+    else:
+        print("Form not validated. Errors:", form.errors)
     return render_template('queries/create.html', form=form) 

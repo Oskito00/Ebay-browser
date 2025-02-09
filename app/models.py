@@ -2,6 +2,7 @@ from datetime import datetime
 from app.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.dialects.postgresql import NUMERIC
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -34,34 +35,30 @@ class User(UserMixin, db.Model):
 class Query(db.Model):
     __tablename__ = 'queries'
     
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True)
     keywords = db.Column(db.String(255), nullable=False)
-    filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
-    check_interval = db.Column(db.Integer, default=60)  # Seconds
-    is_active = db.Column(db.Boolean, default=False)
+    check_interval = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    min_price = db.Column(db.Numeric(10,2))
+    max_price = db.Column(db.Numeric(10,2))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
+    is_active = db.Column(db.Boolean, default=False)
     last_checked = db.Column(db.DateTime)
     limit = db.Column(db.Integer, default=200)
     total_items = db.Column(db.Integer)  # Track total found
     price_alert_threshold = db.Column(db.Float, default=5.0)  # Percentage threshold
     
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     items = db.relationship('Item', backref='query', lazy=True)
 
 class Item(db.Model):
     __tablename__ = 'items'
     
     id = db.Column(db.Integer, primary_key=True)
-    ebay_item_id = db.Column(db.String(50), unique=True, nullable=False)
+    ebay_id = db.Column(db.String(50), unique=True, nullable=False)
     title = db.Column(db.String(255))
-    price = db.Column(db.Numeric(10,2), nullable=False)  # Ensure not null
-    currency = db.Column(db.String(3), nullable=False)
-    condition = db.Column(db.String(50))
+    price = db.Column(db.Float)
     url = db.Column(db.String(512))
-    first_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, default=True)
-    price_history = db.Column(db.JSON, default=[])  # Store historical prices
-    last_price_change = db.Column(db.DateTime)
-    
-    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False) 
+    image_url = db.Column(db.String(512))
+    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
+    last_updated = db.Column(db.DateTime) 

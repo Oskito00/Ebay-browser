@@ -1,6 +1,9 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField
-from wtforms.validators import DataRequired, Email, EqualTo, NumberRange
+from wtforms import StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField, SelectMultipleField, DecimalField
+from wtforms.validators import DataRequired, Email, EqualTo, NumberRange, Optional, InputRequired
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect()
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[
@@ -28,20 +31,13 @@ class RegistrationForm(FlaskForm):
 
 class QueryForm(FlaskForm):
     keywords = StringField('Search Terms', validators=[DataRequired()])
-    min_price = FloatField('Minimum Price')
-    max_price = FloatField('Maximum Price')
-    condition = SelectField('Condition', choices=[
-        ('', 'Any'),
-        ('1000', 'New'),
-        ('3000', 'Used'),
-        ('4000', 'Very Good'),
-        ('5000', 'Good'),
-        ('6000', 'Acceptable')
-    ])
-    check_interval = IntegerField('Check Every (minutes)', validators=[
-        NumberRange(min=15, max=1440)
-    ])
-    submit = SubmitField('Save')
+    min_price = DecimalField('Minimum Price', places=2, validators=[Optional()])
+    max_price = DecimalField('Maximum Price', places=2, validators=[Optional()])
+    check_interval = IntegerField(
+        'Check Every (minutes)', 
+        validators=[InputRequired(), NumberRange(min=1, max=1440)]
+    )
+    submit = SubmitField('Save Search')
 
 class DeleteForm(FlaskForm):
     submit = SubmitField('Delete') 

@@ -1,21 +1,23 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<h1>New Search</h1>
+<h1>Create New Search</h1>
 <form method="POST">
     {{ form.hidden_tag() }}
     
+    <!-- Keywords -->
     <div class="form-group">
-        <label for="keywords">Search Keywords:</label>
-        <input type="text" id="keywords" name="keywords" required>
+        {{ form.keywords.label }}
+        {{ form.keywords(class="form-control") }}
     </div>
     
+    <!-- Check Interval -->
     <div class="form-group">
-        <label for="threshold">Price Alert Threshold (%):</label>
-        <input type="number" id="threshold" name="threshold" 
-               step="0.1" min="0" max="100" value="5.0" required>
+        {{ form.check_interval.label }}
+        {{ form.check_interval(class="form-control") }}
     </div>
     
+    <!-- Price Fields -->
     <div class="form-group">
         {{ form.min_price.label }}
         {{ form.min_price(class="form-control") }}
@@ -26,12 +28,7 @@
         {{ form.max_price(class="form-control") }}
     </div>
     
-    <div class="form-group">
-        {{ form.condition.label }}
-        {{ form.condition(class="form-control") }}
-    </div>
-    
-    <button type="submit" class="btn-save">Create Search</button>
+    <button type="submit" class="btn btn-primary" name="submit">Save Search</button>
     <a href="{{ url_for('queries.manage_queries') }}" class="btn-cancel">Cancel</a>
 </form>
 {% endblock %}

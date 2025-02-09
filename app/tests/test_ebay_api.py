@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from app.ebay.api import EbayAPI
 from app.models import Query, Item
 from app import db
+from ..ebay.api import parse_ebay_response
 
 @pytest.fixture
 def ebay_api():
@@ -155,22 +156,24 @@ def test_both_prices(ebay_api):
     not os.getenv('EBAY_CLIENT_SECRET'),
     reason="Requires eBay CLIENT_ID and CLIENT_SECRET in .env"
 )
-def test_real_api_search():
-    api = EbayAPI()
-    params = {
-        'q': 'iphone',
-        'filter': 'price:[100..500]',
-        'limit': 1
+def test_real_api_search(ebay_api):
+    params = {'q': 'iphone', 'limit': 1}
+    response = ebay_api.search(params)
+    items = ebay_api.parse_response(response, query_id=1)
+    
+    assert len(items) > 0
+    assert isinstance(items[0], Item)
+
+
+def test_parse_missing_image():
+    sample = {
+    'itemSummaries': [{
+            'itemId': '123',
+            'title': 'Test Item',
+            'price': {'value': '100.00'},
+            'itemWebUrl': 'http://test.com'
+            # Missing 'image' field
+        }]
     }
-    
-    response = api.search(params)
-    
-    assert 'itemSummaries' in response
-    assert len(response['itemSummaries']) > 0
-    
-    item = response['itemSummaries'][0]
-    assert 'itemId' in item
-    assert 'price' in item
-    assert 'value' in item['price']
-    assert 'currency' in item['price']
-    assert 'itemWebUrl' in item
+    items = parse_ebay_response(sample, 1)
+    assert items[0].image_url is None

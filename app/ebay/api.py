@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from flask import current_app
 import time
 from .constants import CONDITION_IDS
+from app.models import Item
 
 class EbayAPI:
     def __init__(self):
@@ -134,3 +135,46 @@ class EbayAPI:
             del params['filter']
         
         return params 
+
+    def parse_response(self, response, query_id):
+        items = []
+        for item_data in response.get('itemSummaries', []):
+            image = item_data.get('image', {})
+            items.append(Item(
+                ebay_id=item_data.get('itemId', 'N/A'),
+                title=item_data.get('title', 'No Title'),
+                price=float(item_data.get('price', {}).get('value', 0)),
+                url=item_data.get('itemWebUrl', '#'),
+                image_url=image.get('imageUrl'),
+                query_id=query_id,
+                last_updated=datetime.utcnow()
+            ))
+        return items
+
+def parse_ebay_response(response, query_id):
+    items = []
+    for item_data in response.get('itemSummaries', []):
+        # Safely get image URL
+        image = item_data.get('image', {})
+        image_url = image.get('imageUrl') if image else None
+        
+        # Handle missing price
+        price_data = item_data.get('price', {})
+        try:
+            price = float(price_data.get('value', 0))
+        except (TypeError, ValueError):
+            price = 0.0
+        
+        items.append(Item(
+            ebay_id=item_data.get('itemId', 'N/A'),
+            title=item_data.get('title', 'No Title'),
+            price=price,
+            url=item_data.get('itemWebUrl', '#'),
+            image_url=image_url,
+            query_id=query_id,
+            last_updated=datetime.utcnow()
+        ))
+    return items 
+
+__all__ = ['EbayAPI', 'parse_ebay_response']
+

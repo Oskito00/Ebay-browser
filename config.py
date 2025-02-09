@@ -13,6 +13,9 @@ class Config:
     EBAY_CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
     EBAY_ACCESS_TOKEN = os.getenv('EBAY_ACCESS_TOKEN')
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+    WTF_CSRF_ENABLED = True  # Should be True in production
+    WTF_CSRF_SECRET_KEY = os.getenv('CSRF_SECRET_KEY', 'fallback-secret-key')
+    SQLALCHEMY_ECHO = True  # Show all SQL queries
 
     @classmethod
     def verify(cls):
