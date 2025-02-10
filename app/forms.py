@@ -60,23 +60,11 @@ class QueryForm(FlaskForm):
 class DeleteForm(FlaskForm):
     submit = SubmitField('Delete')
 
-# class TelegramConnectForm(FlaskForm):
-#     chat_id = StringField('Chat ID', validators=[
-#         DataRequired(),
-#         Regexp(r'^\d+$', message="Must be numeric")
-#     ]) 
-
-class SettingsForm(FlaskForm):
+class TelegramConnectForm(FlaskForm):
     chat_id = StringField('Chat ID', validators=[
         DataRequired(),
         Regexp(r'^\d+$', message="Must be numeric")
     ]) 
 
-class UpdateChatIdForm(FlaskForm):
-    new_chat_id = StringField('New Chat ID', validators=[
-        DataRequired(),
-        Regexp(r'^\d+$', message="Must be numeric")
-    ]) 
-
-class DisconnectForm(FlaskForm):
+class TelegramDisconnectForm(FlaskForm):
     pass  # Only needs CSRF token 

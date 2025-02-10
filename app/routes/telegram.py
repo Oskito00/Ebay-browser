@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
 from app.extensions import db, csrf, encryptor
-from app.forms import SettingsForm, DisconnectForm
+from app.forms import TelegramConnectForm, TelegramDisconnectForm
 from app.models import User
 from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
@@ -11,21 +11,20 @@ bp = Blueprint('telegram', __name__, url_prefix='/telegram')
 @bp.route('/connect', methods=['GET', 'POST'])
 @login_required
 def connect():
-    form = SettingsForm()
+    form = TelegramConnectForm()
     
     if form.validate_on_submit():
         chat_id = form.chat_id.data
         
-        # Existing validation logic
+        # Existing validation
         current_user.telegram_chat_id = chat_id
+        current_user.telegram_connected = True
         db.session.commit()
-        flash('Connected!', 'success')
+        
+        flash('Telegram connected!', 'success')
         return redirect(url_for('main.settings'))
     
-    return render_template(
-        'telegram/connect.html',
-        form=form
-    )
+    return render_template('telegram/connect.html', form=form)
 
 @bp.route('/connect', methods=['POST'])
 @login_required
@@ -92,6 +91,7 @@ def update_chat_id():
 @login_required
 def disconnect():
     current_user.telegram_chat_id = None
+    current_user.telegram_connected = False
     db.session.commit()
     flash('Telegram disconnected', 'info')
     return redirect(url_for('main.settings'))
