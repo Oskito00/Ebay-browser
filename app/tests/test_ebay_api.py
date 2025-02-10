@@ -36,12 +36,13 @@ def test_search_basic(ebay_api, mock_response):
 def test_filter_building(ebay_api):
     filters = {
         'itemLocationCountry': 'US',
-        'priceCurrency': 'USD',
+        'currency': 'USD',
         'min_price': 100,
         'max_price': 200,
     }
-    filter_str = ebay_api._build_filter(filters)
-    assert filter_str == 'itemLocationCountry:US,priceCurrency:USD,price:[100..200]'
+    mock_api = EbayAPI(marketplace='EBAY_US')
+    filter_str = mock_api._build_filter(filters)
+    assert filter_str == 'itemLocationCountry:US,currency:USD,price:[100..200]'
 
 @patch('requests.get')
 def test_pagination(mock_get, ebay_api, mock_response):
@@ -79,10 +80,11 @@ def test_rate_limit_handling(mock_get, ebay_api, mock_response):
 def test_complex_filter(ebay_api):
     filters = {
         'itemLocationCountry': 'US',
-        'priceCurrency': 'USD',
+        'currency': 'USD',
         'min_price': 50,
     }
-    assert ebay_api._build_filter(filters) == 'itemLocationCountry:US,priceCurrency:USD,price:[50..]'
+    mock_api = EbayAPI(marketplace='EBAY_US')
+    assert mock_api._build_filter(filters) == 'itemLocationCountry:US,currency:USD,price:[50..]'
 
 def test_token_refresh_flow():
     api = EbayAPI()

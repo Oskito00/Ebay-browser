@@ -49,6 +49,7 @@ class Query(db.Model):
     total_items = db.Column(db.Integer)  # Track total found
     price_alert_threshold = db.Column(db.Float, default=5.0)  # Percentage threshold
     marketplace = db.Column(db.String(10), nullable=False, default='EBAY_GB')
+    item_location = db.Column(db.String(10), nullable=False, default='GB')
     
     items = db.relationship('Item', backref='query', lazy=True)
 

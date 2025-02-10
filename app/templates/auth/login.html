@@ -2,7 +2,7 @@
 
 {% block content %}
 <h1>Sign In</h1>
-<form method="POST">
+<form method="POST" action="{{ url_for('auth.login') }}">
     {{ form.hidden_tag() }}
     <div class="form-group">
         {{ form.email.label }}

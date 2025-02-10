@@ -3,19 +3,24 @@ from flask_login import login_user, logout_user, login_required
 from app.models import User
 from app.forms import LoginForm, RegistrationForm
 from app import db
+from werkzeug.security import check_password_hash
 
 bp = Blueprint('auth', __name__)
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    print("User pressed login button")
     form = LoginForm()
+    print("Form data:", form.data)
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
+        print("User found:", user)
+        if user and check_password_hash(user.password_hash, form.password.data):
             login_user(user)
             print(f"User logged in: {user.email}")
+            flash('Logged in successfully!', 'success')
             return redirect(url_for('queries.manage_queries'))
-        flash('Invalid email or password')
+        flash('Invalid email or password', 'danger')
     return render_template('auth/login.html', form=form)
 
 @bp.route('/register', methods=['GET', 'POST'])

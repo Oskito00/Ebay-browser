@@ -2,14 +2,14 @@
 
 {% block content %}
 <h1>Create New Search</h1>
-<form method="POST">
+<form method="POST" action="{{ url_for('queries.create_query') }}">
     {{ form.hidden_tag() }}
 
     <div class="filter-section">
       <h3>Marketplace</h3>
       <select id="marketplace" name="marketplace" class="marketplace_select">
-        <option value="EBAY_US" data-site="ebay.com">United States (ebay.com)</option>
         <option value="EBAY_GB" data-site="ebay.co.uk">Great Britain (ebay.co.uk)</option>
+        <option value="EBAY_US" data-site="ebay.com">United States (ebay.com)</option>
         <option value="EBAY_DE" data-site="ebay.de">Germany (ebay.de)</option>
         <option value="EBAY_CA" data-site="ebay.ca">Canada [English] (ebay.ca)</option>
         <option value="EBAY_AU" data-site="ebay.com.au">Australia (ebay.com.au)</option>
