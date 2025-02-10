@@ -14,5 +14,6 @@
     </div>
     {{ form.submit(class="btn btn-primary") }}
 </form>
-<p>New User? <a href="{{ url_for('auth.register') }}">Click to Register!</a></p>
+<p>New User? <a href="{{ url_for('auth.register') }}">Click to Register!</a></p> 
+<!-- TODO: fix bug that after a while old emails don't work -->
 {% endblock %}

@@ -60,10 +60,12 @@ def create_query():
             min_price = float(form.min_price.data) if form.min_price.data else None
             max_price = float(form.max_price.data) if form.max_price.data else None
             query = Query(
+                marketplace=form.marketplace.data,
                 keywords=form.keywords.data,
+                check_interval=form.check_interval.data,
                 min_price=Decimal(str(min_price)) if min_price else None,
                 max_price=Decimal(str(max_price)) if max_price else None,
-                check_interval=form.check_interval.data,
+                item_location=form.item_location.data,
                 user_id=current_user.id
             )
             print("Query object:", query.__dict__)  # Before add

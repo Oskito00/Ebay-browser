@@ -63,3 +63,4 @@ class Item(db.Model):
     image_url = db.Column(db.String(512))
     query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
     last_updated = db.Column(db.DateTime) 
+    currency = db.Column(db.String(10), nullable=False, default='GBP')

@@ -38,7 +38,23 @@ class QueryForm(FlaskForm):
         'Check Every (minutes)', 
         validators=[InputRequired(), NumberRange(min=1, max=1440)]
     )
-    marketplace = SelectField('Marketplace', choices=[(key, value) for key, value in MARKETPLACE_IDS.items()], default='UK')
+    marketplace = SelectField(
+    'Marketplace',
+    choices=[
+        (m['code'], f"{m['country']} ({m['site']})") 
+        for m in MARKETPLACE_IDS.values()
+    ],
+    default='EBAY_GB'
+)
+    item_location = SelectField(
+        'Item Location',
+        choices=[
+            (l['location'], f"{l['country']}") 
+            for l in MARKETPLACE_IDS.values()
+        ],
+        default='GB'
+    )
+
     submit = SubmitField('Save Search')
 
 class DeleteForm(FlaskForm):

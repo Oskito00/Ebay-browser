@@ -1,6 +1,8 @@
 from decimal import Decimal
 import logging
 from datetime import datetime, timedelta
+
+from flask import request
 from app import db
 from app.ebay.api import EbayAPI
 from app.models import Query, Item
@@ -10,8 +12,9 @@ logger = logging.getLogger(__name__)
 
 class MonitoringService:
     def __init__(self):
-        self.ebay_api = EbayAPI()
-        self.check_interval = timedelta(minutes=30)
+        marketplace = request.form.get('marketplace', 'EBAY_GB')
+        self.ebay_api = EbayAPI(marketplace=marketplace)
+        self.check_interval = timedelta(minutes=request.form.get('check_interval', 5))
     
     def run_checks(self):
         """Main entry point for monitoring checks"""

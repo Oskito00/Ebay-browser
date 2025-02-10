@@ -37,24 +37,5 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()  # Ensure tables exist
     
-    print("Current DB URI:", app.config['SQLALCHEMY_DATABASE_URI'])
-    
-    # Configure logging
-    if not app.debug:
-        file_handler = RotatingFileHandler(
-            'app.log',
-            maxBytes=10240,
-            backupCount=10
-        )
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-        ))
-        file_handler.setLevel(app.config['LOG_LEVEL'])
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(app.config['LOG_LEVEL'])
-        
-        # Silence SQLAlchemy and Werkzeug
-        logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
-        logging.getLogger('werkzeug').setLevel(logging.WARNING)
     
     return app 

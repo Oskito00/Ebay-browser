@@ -1,7 +1,7 @@
 import os
 from venv import logger
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import current_app
 import time
 from .constants import CONDITION_IDS, MARKETPLACE_IDS
@@ -14,32 +14,36 @@ logger = logging.getLogger(__name__)
 class EbayAPI:
     def __init__(self, marketplace='EBAY_GB'):
         self.token = None
-        self.token_expiry = 0
-        self.marketplace = marketplace
-        self.country_code = 'GB'
+        self.token_expiry = datetime.min.replace(tzinfo=timezone.utc)
         self.client_id = os.getenv('EBAY_CLIENT_ID')
         self.client_secret = os.getenv('EBAY_CLIENT_SECRET')
         self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
         self.base_url = "https://api.ebay.com/buy/browse/v1"
         self.headers = {
             'X-EBAY-C-MARKPLACE-ID': marketplace,
-            'Accept-Language': 'en-GB',  # British English
+            'X-EBAY-C-CURRENCY': MARKETPLACE_IDS[marketplace]['currency'],
+            'Accept-Language': 'en-GB',  # TODO: This might give errors when I switch to country that doesn't speak english
             'Content-Language': 'en-GB', #TODO: make dynamic once it works
             'Authorization': f'Bearer {self._get_token()}',
             'Content-Type': 'application/json'
         }
-        self.currency = 'GBP' if marketplace == 'EBAY_GB' else 'USD'
+        self.marketplace = marketplace
+        self.country_code = MARKETPLACE_IDS[marketplace]['location']
+        self.currency = MARKETPLACE_IDS[marketplace]['currency']
+        self._get_token()  # Fetch initial token
     
     def _token_needs_refresh(self):
         """Check if token needs refresh (60 second buffer)"""
-        return time.time() >= self.token_expiry - 60
-
+        if not self.token:
+            return True  # No token exists
+        return datetime.now(timezone.utc) > (self.token_expiry - timedelta(seconds=60))
 
     def _get_token(self):
-        if time.time() < self.token_expiry:
+        """Main token acquisition method"""
+        if not self._token_needs_refresh():
             return self.token
-            
-        # Client Credentials flow
+        
+        # Refresh token if needed
         auth = (self.client_id, self.client_secret)
         response = requests.post(
             self.token_url,
@@ -54,29 +58,23 @@ class EbayAPI:
         
         token_data = response.json()
         self.token = token_data['access_token']
-        self.token_expiry = time.time() + token_data['expires_in'] - 60  # 1 min buffer
+        self.token_expiry = datetime.now(timezone.utc) + timedelta(
+            seconds=token_data['expires_in']
+        )
         return self.token
 
     def search(self, keywords, filters=None, limit=200, offset=0):
-        logger.debug(
-            f"Searching eBay {self.marketplace} marketplace "
-            f"(Currency: {self.currency}, Country: {self.country_code})"
-        )
         """Search with pagination support"""
         # Initialize filters as empty dict if None
         filters = filters or {}
         
-        token = self._get_token()
+        self._get_token()
         headers = {
-            'Authorization': f'Bearer {token}',
+            'Authorization': f'Bearer {self.token}',
             'X-EBAY-C-MARKPLACE-ID': self.marketplace,
             'X-EBAY-C-CURRENCY': self.currency,
             'Content-Type': 'application/json'
         }
-        
-        # Add country filter
-        if 'country' not in filters:
-            filters['country'] = MARKETPLACE_IDS[self.marketplace]['country']
         
         params = {
             'q': keywords,
@@ -85,10 +83,6 @@ class EbayAPI:
             'limit': limit,
             'offset': offset
         }
-        
-        if self._token_needs_refresh():
-            new_token = self._refresh_token()
-            headers['Authorization'] = f'Bearer {new_token}'
         
         response = requests.get(
             f"{self.base_url}/item_summary/search",
@@ -109,23 +103,29 @@ class EbayAPI:
     
     def _build_filter(self, filters):
         filter_parts = [
-            'itemLocationCountry:GB',
-            'priceCurrency:GBP',
-            'sellerLocationCountry:GB',
-            'priceCurrency:GBP'
         ]
-        
-        # Price range (if any)
-        price_filter = []
-        if filters.get('min_price'):
-            price_filter.append(f"{filters['min_price']}..")
-        if filters.get('max_price'):
-            price_filter.append(f"..{filters['max_price']}")
-        
-        if price_filter:
-            filter_parts.append(f'price:[{"".join(price_filter)}]')
 
-        #TODO: add condition filter
+        filter_parts.append(f"itemLocationCountry:{filters.get('item_location', self.country_code)}")
+        filter_parts.append(f"currency:{self.currency}")
+
+
+        
+        # Handle price range correctly
+        min_price = filters.get('min_price')
+        max_price = filters.get('max_price')
+        
+        if min_price is not None or max_price is not None:
+            price_filter = 'price:['
+            if min_price is not None and max_price is not None:
+                price_filter += f"{min_price}..{max_price}"
+            elif min_price is not None:
+                price_filter += f"{min_price}.."
+            elif max_price is not None:
+                price_filter += f"..{max_price}"
+            price_filter += ']'
+            filter_parts.append(price_filter)
+        
+
         
         return ','.join(filter_parts)
 
@@ -259,16 +259,6 @@ def identify_new_items(previous, current):
 #     query.last_checked = datetime.utcnow()
 #     db.session.commit()
 
-def test_price_filter():
-    api = EbayAPI()
-    filters = {'min_price': 100}
-    results = api.search("test", filters=filters)
-    
-    for item in results['itemSummaries']:
-        price = float(item['price']['value'])
-        currency = item['price']['currency']
-        print(f"Item {item['itemId']}: {price} {currency}")
-        assert price >= 100, f"Price {price} below min filter"
 
 def validate_marketplace(marketplace):
     if marketplace not in MARKETPLACE_IDS.values():

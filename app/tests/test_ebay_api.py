@@ -1,7 +1,7 @@
 import logging
 import os
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 from app.ebay.api import EbayAPI
 from app.ebay.constants import MARKETPLACE_IDS
@@ -35,12 +35,13 @@ def test_search_basic(ebay_api, mock_response):
 
 def test_filter_building(ebay_api):
     filters = {
+        'itemLocationCountry': 'US',
+        'priceCurrency': 'USD',
         'min_price': 100,
         'max_price': 200,
-        'condition': ['3000']
     }
     filter_str = ebay_api._build_filter(filters)
-    assert filter_str == 'price:[100..200],conditionIds:{3000}'
+    assert filter_str == 'itemLocationCountry:US,priceCurrency:USD,price:[100..200]'
 
 @patch('requests.get')
 def test_pagination(mock_get, ebay_api, mock_response):
@@ -77,17 +78,25 @@ def test_rate_limit_handling(mock_get, ebay_api, mock_response):
 
 def test_complex_filter(ebay_api):
     filters = {
+        'itemLocationCountry': 'US',
+        'priceCurrency': 'USD',
         'min_price': 50,
-        'condition': ['2000', '2500']
     }
-    assert ebay_api._build_filter(filters) == 'price:[50..],conditionIds:{2000,2500}'
+    assert ebay_api._build_filter(filters) == 'itemLocationCountry:US,priceCurrency:USD,price:[50..]'
 
-def test_expired_token_refresh(ebay_api, mock_response):
-    ebay_api.token_expiry = datetime.utcnow() - timedelta(minutes=1)
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = mock_response(json_data={'itemSummaries': []})
-        ebay_api.search("test")
-        assert ebay_api.token is not None
+def test_token_refresh_flow():
+    api = EbayAPI()
+    api.token_expiry = datetime.now(timezone.utc) - timedelta(hours=1)
+    
+    with patch('requests.post') as mock_post:
+        mock_post.return_value.json.return_value = {
+            'access_token': 'new_token',
+            'expires_in': 7200
+        }
+        token = api._get_token()
+        
+        assert token == 'new_token'
+        assert api.token_expiry > datetime.now(timezone.utc)
 
 def test_search_success(ebay_api):
     with patch('requests.get') as mock_get:
@@ -195,20 +204,10 @@ def test_marketplace_selection(ebay_api, marketplace, currency, keywords):
         results = api.search(keywords)
         assert results['itemSummaries'][0]['price']['currency'] == currency
 
-def test_currency_filter(ebay_api):
-    """Verify currency is included in API request filters"""
-    with requests_mock.Mocker() as m:
-        m.get(requests_mock.ANY, json={'itemSummaries': []})
-        ebay_api.search("test", {'min_price': 50}, marketplace='EBAY_DE')
-        
-        # Verify filter parameter
-        request = m.last_request
-        assert 'filter=price:[50.00..],priceCurrency:EUR' in request.query
-
 
 @pytest.mark.live
 def test_live_marketplace_search():
-    api = EbayAPI(marketplace='EBAY_GB')
+    api = EbayAPI(marketplace='EBAY_US')
     results = api.search("iphone", limit=5)
     
     print(f"\nAPI Filters Used: {api._build_filter({})}")
@@ -220,8 +219,8 @@ def test_live_marketplace_search():
         print(f"Location: {item.get('itemLocation',{}).get('country')}")
         print(f"URL: {item['itemWebUrl']}")
     
-    # Verify all items are from GB
+    # Verify all items are from US
     for item in results['itemSummaries']:
-        assert item.get('itemLocation', {}).get('country') == 'GB', f"Item location not GB: {item.get('itemLocation')}"
+        assert item.get('itemLocation', {}).get('country') == 'US', f"Item location not US: {item.get('itemLocation')}"
     
     # Assertions remain the same

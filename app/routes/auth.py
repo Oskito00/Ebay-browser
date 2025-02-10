@@ -13,6 +13,7 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
+            print(f"User logged in: {user.email}")
             return redirect(url_for('queries.manage_queries'))
         flash('Invalid email or password')
     return render_template('auth/login.html', form=form)
