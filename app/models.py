@@ -65,3 +65,12 @@ class Item(db.Model):
     query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
     last_updated = db.Column(db.DateTime) 
     currency = db.Column(db.String(10), nullable=False, default='GBP')
+    legacy_id = db.Column(db.String(50))
+    original_price = db.Column(db.Numeric(10,2))
+    original_currency = db.Column(db.String(3))
+    seller = db.Column(db.String(100))
+    seller_rating = db.Column(db.String(10))
+    condition = db.Column(db.String(50))
+    postal_code = db.Column(db.String(20))
+    categories = db.Column(db.JSON)  # Requires PostgreSQL 9.4+
+    listing_date = db.Column(db.DateTime)

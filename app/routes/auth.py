@@ -15,11 +15,16 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         print("User found:", user)
-        if user and check_password_hash(user.password_hash, form.password.data):
-            login_user(user)
-            print(f"User logged in: {user.email}")
-            flash('Logged in successfully!', 'success')
-            return redirect(url_for('queries.manage_queries'))
+        if not user:
+            flash('User not found', 'danger')
+            return redirect(url_for('auth.login'))
+        if not user.check_password(form.password.data):
+            flash('Invalid password', 'danger')
+            return redirect(url_for('auth.login'))
+        login_user(user)
+        print(f"User logged in: {user.email}")
+        flash('Logged in successfully!', 'success')
+        return redirect(url_for('queries.manage_queries'))
         flash('Invalid email or password', 'danger')
     return render_template('auth/login.html', form=form)
 

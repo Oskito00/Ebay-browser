@@ -101,12 +101,39 @@ class EbayAPI:
             'itemSummaries': response.json().get('itemSummaries', [])
         }
     
+    def search_all_pages(self, keywords, filters=None):
+        all_items = []
+        total = None
+        offset = 0
+        
+        while True:
+            result = self.search(keywords, filters, limit=200, offset=offset)
+            
+            # First page sets total
+            if total is None:
+                total = result['total']
+                if total == 0:
+                    break
+            
+            all_items.extend(result['itemSummaries'])
+            offset += len(result['itemSummaries'])
+            
+            # Break conditions
+            if len(result['itemSummaries']) == 0:
+                break
+            if offset >= total:
+                break
+            
+            time.sleep(2)  # Rate limit
+        
+        return all_items
+    
     def _build_filter(self, filters):
         filter_parts = [
         ]
 
         filter_parts.append(f"itemLocationCountry:{filters.get('item_location', self.country_code)}")
-        filter_parts.append(f"currency:{self.currency}")
+        filter_parts.append(f"priceCurrency:{self.currency}")
 
 
         
@@ -171,98 +198,47 @@ class EbayAPI:
         
         return params 
 
-    def parse_response(self, response, query_id):
+    def parse_response(self, response):
         items = []
         for item_data in response.get('itemSummaries', []):
-            image = item_data.get('image', {})
             price_info = item_data.get('price', {})
-            items.append(Item(
-                ebay_id=item_data.get('itemId', 'N/A'),
-                title=item_data.get('title', 'No Title'),
-                price=float(price_info.get('value', 0)),
-                currency=price_info.get('currency', self.currency),
-                url=item_data.get('itemWebUrl', '#'),
-                image_url=image.get('imageUrl'),
-                query_id=query_id,
-                last_updated=datetime.utcnow()
-            ))
+            
+            # Handle original price for non-US listings
+            original_price = price_info.get('convertedFromValue')
+            original_currency = price_info.get('convertedFromCurrency')
+            
+            # US listings don't have converted prices
+            if original_price is None:
+                original_price = price_info.get('value')
+                original_currency = self.currency  # USD for US marketplace
+            
+            items.append({
+                'ebay_id': item_data.get('itemId'),
+                'legacy_id': item_data.get('legacyItemId'),
+                'title': item_data.get('title', 'No Title'),
+                'price': float(price_info.get('value', 0)),
+                'currency': price_info.get('currency', self.currency),
+                'original_price': float(original_price) if original_price else None,
+                'original_currency': original_currency,
+                'url': item_data.get('itemWebUrl'),
+                'image_url': item_data.get('image', {}).get('imageUrl'),
+                'seller': item_data.get('seller', {}).get('username'),
+                'seller_rating': item_data.get('seller', {}).get('feedbackPercentage'),
+                'condition': item_data.get('condition'),
+                'location': {
+                    'country': item_data.get('itemLocation', {}).get('country'),
+                    'postal_code': item_data.get('itemLocation', {}).get('postalCode')
+                },
+                'categories': [cat['categoryName'] for cat in item_data.get('categories', [])],
+                'listing_date': item_data.get('itemCreationDate'),
+            })
         return items
 
-
-
-def parse_ebay_response(response, query_id):
-    items = []
-    for item_data in response.get('itemSummaries', []):
-        # Safely get image URL
-        image = item_data.get('image', {})
-        image_url = image.get('imageUrl') if image else None
-        
-        # Handle missing price
-        price_data = item_data.get('price', {})
+    def _parse_price(self, price_data, key='value'):
         try:
-            price = float(price_data.get('value', 0))
+            return float(price_data.get(key, 0))
         except (TypeError, ValueError):
-            price = 0.0
-        
-        items.append(Item(
-            ebay_id=item_data.get('itemId', 'N/A'),
-            title=item_data.get('title', 'No Title'),
-            price=price,
-            url=item_data.get('itemWebUrl', '#'),
-            image_url=image_url,
-            query_id=query_id,
-            last_updated=datetime.utcnow()
-        ))
-    return items 
-
-# def execute_search(query):
-#     try:
-#         api = EbayAPI()
-#         response = api.search(
-#             keywords=query.keywords,
-#             filters={
-#                 'min_price': query.min_price,
-#                 'max_price': query.max_price,
-#                 'condition': query.conditions
-#             }
-#         )
-        
-#         # Process response
-#         current_items = api.parse_response(response, query.id)
-#         previous_items = get_previous_items(query)
-#         new_items = identify_new_items(previous_items, current_items)
-        
-#         # Store results
-#         save_results(query, current_items, new_items)
-#         return new_items
-        
-#     except Exception as e:
-#         logger.error(f"Search failed for query {query.id}: {str(e)}")
-#         return []
-
-def get_previous_items(query):
-    if not query.results:
-        return []
-    return query.results[-1].items
-
-def identify_new_items(previous, current):
-    prev_ids = {item.ebay_id for item in previous}
-    return [item for item in current if item.ebay_id not in prev_ids]
-
-# def save_results(query, items, new_items):
-#     result = Result(
-#         query=query,
-#         items=items,
-#         new_items=new_items
-#     )
-#     db.session.add(result)
-#     query.last_checked = datetime.utcnow()
-#     db.session.commit()
-
-
-def validate_marketplace(marketplace):
-    if marketplace not in MARKETPLACE_IDS.values():
-        raise ValueError(f"Invalid marketplace. Valid options: {', '.join(MARKETPLACE_IDS.values())}")
+            return 0.0
 
 __all__ = ['EbayAPI', 'parse_ebay_response']
 

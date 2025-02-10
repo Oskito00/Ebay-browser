@@ -7,7 +7,6 @@ from app.ebay.api import EbayAPI
 from app.ebay.constants import MARKETPLACE_IDS
 from app.models import Query, Item
 from app import db
-from ..ebay.api import parse_ebay_response
 import requests_mock
 import json
 
@@ -165,22 +164,51 @@ def test_real_api_search(ebay_api):
     response = ebay_api.search(params)
     items = ebay_api.parse_response(response, query_id=1)
     
+    print(f"First item keys: {items[0].keys()}")
+    print(f"Sample item: {items[0]}")
+    
+    # Check dictionary structure
+    assert len(items) > 0
+    assert 'title' in items[0]
+    assert 'price' in items[0]
+    assert 'currency' in items[0]
+
+@pytest.mark.skipif(
+    not os.getenv('EBAY_CLIENT_ID') or 
+    not os.getenv('EBAY_CLIENT_SECRET'),
+    reason="Requires eBay CLIENT_ID and CLIENT_SECRET in .env"
+)
+def test_real_api_search_with_price_filter():
+    ebay_api = EbayAPI(marketplace='EBAY_GB')
+    # Test with price range filter
+    filters = {
+        'min_price': 200,
+        'max_price': 400
+    }
+    print(("Searching in:"), ebay_api.marketplace)
+    print(("Filters:"), filters)
+    response = ebay_api.search('pokemon base set booster pack', filters=filters, limit=1)
+    items = ebay_api.parse_response(response)
+    
+    print(f"First item keys: {items[0].keys()}")
+    print(f"Sample item with price filter: {items[0]}")
+    
+    # Check dictionary structure and price filter
+    assert len(items) > 0
+    assert 'title' in items[0]
+    assert 'original_price' in items[0]
+    assert 'currency' in items[0]
+    assert float(items[0]['original_price']) >= 200
+    assert float(items[0]['original_price']) <= 400
+
+def test_search_all_pages():
+    ebay_api = EbayAPI(marketplace='EBAY_GB')
+    items = ebay_api.search_all_pages("pokemon base set booster pack", filters={'itemLocationCountry': 'GB', 'priceCurrency': 'GBP', 'min_price': 30, 'max_price': 2000})
+    print("Items length: ", len(items))
+    print(f"First item keys: {items[0].keys()}")
+    print(f"Sample item: {items[0]}")
     assert len(items) > 0
     assert isinstance(items[0], Item)
-
-
-def test_parse_missing_image():
-    sample = {
-    'itemSummaries': [{
-            'itemId': '123',
-            'title': 'Test Item',
-            'price': {'value': '100.00'},
-            'itemWebUrl': 'http://test.com'
-            # Missing 'image' field
-        }]
-    }
-    items = parse_ebay_response(sample, 1)
-    assert items[0].image_url is None
 
 def test_ebay_search():
     api = EbayAPI()

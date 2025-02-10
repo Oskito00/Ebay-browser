@@ -16,4 +16,11 @@
 </form>
 <p>New User? <a href="{{ url_for('auth.register') }}">Click to Register!</a></p> 
 <!-- TODO: fix bug that after a while old emails don't work -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
 {% endblock %}
