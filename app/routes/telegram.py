@@ -77,13 +77,13 @@ def settings():
 @bp.route('/update-chat-id', methods=['POST'])
 @login_required
 def update_chat_id():
-    new_chat_id = request.form.get('new_chat_id')
+    chat_id = request.form.get('chat_id')
     
-    if not new_chat_id.isdigit():
+    if not chat_id.isdigit():
         flash('Invalid Chat ID format', 'danger')
         return redirect(url_for('main.settings'))
     
-    current_user.telegram_chat_id = new_chat_id
+    current_user.telegram_chat_id = chat_id
     db.session.commit()
     flash('Chat ID updated successfully', 'success')
     return redirect(url_for('main.settings'))
