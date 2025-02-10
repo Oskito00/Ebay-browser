@@ -18,7 +18,7 @@ def manage_queries():
     return render_template('queries/manage.html', queries=queries, delete_form=delete_form)
 
 @bp.route('/<int:query_id>', methods=['GET', 'POST'])
-@login_required
+@login_required #TODO: Edit query button is not calling this function/ generally not working
 def edit_query(query_id):
     query = Query.query.get_or_404(query_id)
     form = QueryForm(obj=query)  # Populate form from query object
