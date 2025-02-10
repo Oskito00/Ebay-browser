@@ -96,35 +96,39 @@ class EbayAPI:
             time.sleep(sleep_time)
             return self.search(keywords, filters, limit, offset)
         response.raise_for_status()
-        return {
-            'total': response.json().get('total', 0),
-            'itemSummaries': response.json().get('itemSummaries', [])
-        }
+        return response.json()
     
     def search_all_pages(self, keywords, filters=None):
+        """Search all pages and return parsed items as dictionaries"""
         all_items = []
         total = None
         offset = 0
         
         while True:
-            result = self.search(keywords, filters, limit=200, offset=offset)
+            # Fetch raw API response
+            raw_response = self.search(keywords, filters, limit=200, offset=offset)
             
-            # First page sets total
+            # Parse items immediately
+            parsed_items = self.parse_response(raw_response)
+            # First page initialization
             if total is None:
-                total = result['total']
-                if total == 0:
+                total = raw_response.get('total', 0)
+                if total == 0 or not parsed_items:
                     break
             
-            all_items.extend(result['itemSummaries'])
-            offset += len(result['itemSummaries'])
+            # Store parsed items
+            all_items.extend(parsed_items)
+            
+            # Update offset using parsed items count
+            offset += len(parsed_items)
             
             # Break conditions
-            if len(result['itemSummaries']) == 0:
+            if len(parsed_items) < 200:
                 break
             if offset >= total:
                 break
             
-            time.sleep(2)  # Rate limit
+            time.sleep(1)  # Rate limiting
         
         return all_items
     

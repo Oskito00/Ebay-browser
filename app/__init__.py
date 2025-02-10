@@ -10,6 +10,7 @@ csrf = CSRFProtect()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    csrf.init_app(app)
     
     # Verify configuration
     config_class.verify()
@@ -33,9 +34,16 @@ def create_app(config_class=Config):
 
     from app.routes.queries import bp as queries_bp
     app.register_blueprint(queries_bp)
+
+    from app.routes.telegram import bp as telegram_bp
+    app.register_blueprint(telegram_bp, url_prefix='/telegram')
     
     with app.app_context():
         db.create_all()  # Ensure tables exist
     
+    # # Initialize scheduler
+    # from app.monitor.scheduler import MonitorScheduler
+    # scheduler = MonitorScheduler()
+    # scheduler.start()
     
     return app 

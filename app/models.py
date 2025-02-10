@@ -11,6 +11,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
     telegram_chat_id = db.Column(db.String(50))
+    telegram_connected = db.Column(db.Boolean, default=False)
     telegram_notifications_enabled = db.Column(db.Boolean, default=False)
     notification_preferences = db.Column(db.JSON, default={
         'price_changes': True,

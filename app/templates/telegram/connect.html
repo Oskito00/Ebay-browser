@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="telegram-connect">
+    <h1>🔗 Connect Telegram Account</h1>
+    
+    <div class="steps">
+        <div class="step">
+            <h3>1. Open this bot</h3>
+            <a href="https://t.me/myidbot" 
+               class="btn" 
+               target="_blank">
+                Start Chat with @myidbot
+            </a>
+        </div>
+        
+        <div class="step">
+            <h3>2. Get Chat ID</h3>
+            <p>In the Telegram chat:</p>
+            <ol>
+                <li>Type <code>/getid</code></li>
+                <li>Bot will reply with your Chat ID</li>
+            </ol>
+        </div>
+        
+        <div class="step">
+            <h3>3. Enter Chat ID</h3>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.chat_id.label }}
+                    {{ form.chat_id(class="form-control") }}
+                    {% for error in form.chat_id.errors %}
+                        <small class="text-danger">{{ error }}</small>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary">Connect</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+</script>
+{% endblock %}

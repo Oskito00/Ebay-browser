@@ -8,6 +8,7 @@ from app.ebay.api import EbayAPI
 from app.models import Query, Item
 from app.utils.notifications import NotificationManager
 
+
 logger = logging.getLogger(__name__)
 
 class MonitoringService:
@@ -18,12 +19,15 @@ class MonitoringService:
     
     def run_checks(self):
         """Main entry point for monitoring checks"""
-        queries = self.get_active_queries()
-        for query in queries:
-            self.process_query(query)
+        try:
+            queries = self.get_queries_due_for_check()
+            for query in queries:
+                self.process_query(query)
+        except Exception as e:
+            logger.error(f"Monitoring failed: {str(e)}")
     
-    def get_active_queries(self):
-        """Get queries needing check"""
+    def get_queries_due_for_check(self):
+        """Retrieve active queries needing a check"""
         return Query.query.filter(
             Query.is_active == True,
             (Query.last_checked == None) | 
@@ -31,36 +35,62 @@ class MonitoringService:
         ).all()
     
     def process_query(self, query):
-        """Process query with pagination"""
-        try:
-            all_items = []
-            offset = 0
-            limit = query.limit or 200
-            
-            while True:
-                results = self.ebay_api.search(
-                    keywords=query.keywords,
-                    filters=query.filters,
-                    limit=limit,
-                    offset=offset
-                )
-                
-                all_items.extend(results.get('itemSummaries', []))
-                
-                # Check if we've got all items
-                if not results.get('itemSummaries') or \
-                   len(all_items) >= results.get('total', 0):
-                    break
-                    
-                offset += limit
-            
-            self.process_results(query, all_items)
-            query.last_checked = datetime.utcnow()
-            db.session.commit()
-            
-        except Exception as e:
-            logger.error(f"Query {query.id} failed: {str(e)}")
-            db.session.rollback()
+        """Process a single query"""
+        logger.info(f"Processing query {query.id}: {query.keywords}")
+        
+        # Fetch current items from eBay
+        current_items = self.fetch_current_items(query)
+        current_ids = {item['ebay_id'] for item in current_items}
+        
+        # Identify new items
+        new_items = [item for item in current_items 
+                    if not self.item_exists(query.id, item['ebay_id'])]
+        
+        # Save and notify
+        if new_items:
+            self.save_new_items(query, new_items)
+            self.send_notifications(query, new_items)
+        
+        # Update query status
+        query.last_checked = datetime.utcnow()
+        db.session.commit()
+    
+    def fetch_current_items(self, query):
+        """Fetch all items for query from eBay API"""
+        api = EbayAPI(marketplace=query.marketplace)
+        return api.search_all_pages(
+            keywords=query.keywords,
+            filters=query.filters
+        )
+    
+    def item_exists(self, query_id, ebay_id):
+        """Check if item already exists in database"""
+        return db.session.query(
+            Item.query.filter_by(query_id=query_id, ebay_id=ebay_id).exists()
+        ).scalar()
+    
+    def save_new_items(self, query, items):
+        """Persist new items to database"""
+        for item_data in items:
+            item = Item(
+                ebay_id=item_data['ebay_id'],
+                title=item_data['title'],
+                price=item_data['price'],
+                currency=item_data['currency'],
+                url=item_data['url'],
+                query_id=query.id,
+                first_seen=datetime.utcnow()
+            )
+            db.session.add(item)
+        db.session.commit()
+    
+    def send_notifications(self, query, new_items):
+        """Trigger notifications for new items"""
+        NotificationManager.send(
+            user=query.user,
+            query=query,
+            new_items=new_items
+        )
 
     def process_results(self, query, items):
         current_ids = {i['itemId'] for i in items}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="settings">
+    <h1>⚙️ Account Settings</h1>
+    
+    <div class="telegram-settings card">
+        <div class="card-body">
+            <h2>🔗 Telegram Connection</h2>
+            
+            {% if current_user.telegram_chat_id %}
+                <div class="connected">
+                    <p>Status: <span class="text-success">Connected</span></p>
+                    <p>Chat ID: <code>{{ current_user.telegram_chat_id }}</code></p>
+                    <form method="POST" action="{{ url_for('telegram.update_chat_id') }}">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group">
+                            {{ form.new_chat_id.label }}
+                            {{ form.new_chat_id(class="form-control") }}
+                            {% for error in form.new_chat_id.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-warning">Update Chat ID</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('telegram.disconnect') }}">
+                        {{ disconnect_form.hidden_tag() }}
+                        <button type="submit" class="btn btn-danger">Disconnect</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="disconnected">
+                    <p>Status: <span class="text-danger">Not Connected</span></p>
+                    <a href="{{ url_for('telegram.connect') }}" 
+                       class="btn btn-primary">
+                        Connect Telegram Account
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

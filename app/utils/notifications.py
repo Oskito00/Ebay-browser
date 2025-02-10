@@ -72,9 +72,9 @@ class NotificationManager:
         percent = abs((new_price - old_price) / old_price) * 100
         
         return f"""
-�� Price {change_type} by {percent:.1f}% for {item.title}
-🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}
-💰 From {old_price} {item.currency} to {new_price} {item.currency}
-🔗 {item.url}
-📊 <a href="{url_for('item_detail', item_id=item.id, _external=True)}">Price History</a>
+        💰 Price {change_type} by {percent:.1f}% for {item.title}
+        🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}
+        💰 From {old_price} {item.currency} to {new_price} {item.currency}
+        🔗 {item.url}
+        📊 <a href="{url_for('item_detail', item_id=item.id, _external=True)}">Price History</a>
         """.strip() 

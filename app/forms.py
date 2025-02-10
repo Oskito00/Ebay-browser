@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField, SelectMultipleField, DecimalField
-from wtforms.validators import DataRequired, Email, EqualTo, NumberRange, Optional, InputRequired
+from wtforms.validators import DataRequired, Email, EqualTo, NumberRange, Optional, InputRequired, Regexp
 from flask_wtf.csrf import CSRFProtect
 from app.ebay.constants import MARKETPLACE_IDS
 
@@ -58,4 +58,19 @@ class QueryForm(FlaskForm):
     submit = SubmitField('Save Search')
 
 class DeleteForm(FlaskForm):
-    submit = SubmitField('Delete') 
+    submit = SubmitField('Delete')
+
+# class TelegramConnectForm(FlaskForm):
+#     chat_id = StringField('Chat ID', validators=[
+#         DataRequired(),
+#         Regexp(r'^\d+$', message="Must be numeric")
+#     ]) 
+
+class SettingsForm(FlaskForm):
+    chat_id = StringField('Chat ID', validators=[
+        DataRequired(),
+        Regexp(r'^\d+$', message="Must be numeric")
+    ]) 
+
+class DisconnectForm(FlaskForm):
+    pass  # Only needs CSRF token 

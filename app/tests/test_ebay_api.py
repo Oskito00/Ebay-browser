@@ -201,14 +201,23 @@ def test_real_api_search_with_price_filter():
     assert float(items[0]['original_price']) >= 200
     assert float(items[0]['original_price']) <= 400
 
-def test_search_all_pages():
+def test_search_all_pages(ebay_api):
     ebay_api = EbayAPI(marketplace='EBAY_GB')
-    items = ebay_api.search_all_pages("pokemon base set booster pack", filters={'itemLocationCountry': 'GB', 'priceCurrency': 'GBP', 'min_price': 30, 'max_price': 2000})
-    print("Items length: ", len(items))
-    print(f"First item keys: {items[0].keys()}")
-    print(f"Sample item: {items[0]}")
+    items = ebay_api.search_all_pages("pokemon base set booster pack", {'min_price': 5, 'max_price': 200})
+    
+    # Check dictionary structure
     assert len(items) > 0
-    assert isinstance(items[0], Item)
+    first_item = items[0]
+    
+    # Verify required fields
+    assert isinstance(first_item, dict)
+    assert 'ebay_id' in first_item
+    assert 'title' in first_item
+    assert 'price' in first_item
+    
+    # Check price filter compliance
+    assert first_item['price'] >= 5, f"Price {first_item['price']} below min"
+    assert first_item.get('original_price', first_item['price']) >= 5
 
 def test_ebay_search():
     api = EbayAPI()
