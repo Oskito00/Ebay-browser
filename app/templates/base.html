@@ -12,13 +12,21 @@
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('queries.manage_queries') }}">My Searches</a>
                     <a href="{{ url_for('auth.logout') }}">Logout</a>
-                    <a href="{{ url_for('telegram.connect') }}">Connect Telegram</a>
+                    <div class="telegram-status">
+                        {% if current_user.is_authenticated and current_user.telegram_connected %}
+                            <span class="status-dot connected"></span>
+                            <a href="{{ url_for('main.settings') }}">Settings</a>
+                        {% else %}
+                            <span class="status-dot disconnected"></span>
+                            <a href="{{ url_for('telegram.connect') }}">Connect Telegram</a>
+                        {% endif %}
+                    </div>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Login</a>
                     <a href="{{ url_for('auth.register') }}">Register</a>
                 {% endif %}
             </div>
-            
+           
         </div>
     </nav>
     <div class="content">
