@@ -3,12 +3,14 @@ from app.models import Query, Item
 from app.utils.notifications import NotificationManager
 from app.utils.scraper import scrape_ebay
 from flask import current_app
+from sqlalchemy import select
 
 
 def check_query(query_id):
     try:
-        query = Query.query.get(query_id)
+        query = db.session.get(Query, query_id)
         if not query:
+            current_app.logger.error(f"Query {query_id} not found")
             return
 
         # First run logic

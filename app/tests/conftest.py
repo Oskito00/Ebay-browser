@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from app import create_app, db as _db
+from config import TestingConfig
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 # Load .env from project root
 env_path = Path(__file__).parent.parent / ".env"
@@ -10,7 +12,7 @@ load_dotenv(env_path)
 
 @pytest.fixture(scope='session')
 def app():
-    app = create_app('testing')
+    app = create_app(TestingConfig)
     app_context = app.app_context()
     app_context.push()
     yield app
@@ -27,7 +29,11 @@ def session(db):
     connection = db.engine.connect()
     transaction = connection.begin()
     
-    session = db.create_scoped_session(options={'bind': connection})
+    # Create session using the connection
+    session_factory = sessionmaker(bind=connection)
+    session = scoped_session(session_factory)
+    
+    # Patch the database session
     db.session = session
     
     yield session

@@ -11,12 +11,12 @@ csrf = CSRFProtect()
 
 scheduler = None
 
-def create_app(config_class=Config):
+def create_app(config_class='config.Config'):
     global scheduler
     app = Flask(__name__)
     app.config.from_object(config_class)
     csrf.init_app(app)
-    
+
     # Verify configuration
     config_class.verify()
     
