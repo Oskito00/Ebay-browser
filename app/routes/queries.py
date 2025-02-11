@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 from app.jobs.query_jobs import check_query
 from app.models import Query, db
@@ -35,21 +35,30 @@ def edit_query(query_id):
         
     return render_template('queries/edit.html', form=form, query=query)
 
-@bp.route('/<int:query_id>/delete', methods=['POST'])
+@bp.route('/queries/<int:query_id>/delete', methods=['POST'])
 @login_required
 def delete_query(query_id):
     form = DeleteForm()
+    
     if form.validate_on_submit():
         query = Query.query.get_or_404(query_id)
+        
+        # Check ownership
+        if query.user != current_user:
+            abort(403)
+        
+        # Delete from database
         db.session.delete(query)
         db.session.commit()
-        flash('Search deleted', 'success')
         
+        # Remove scheduler job
         if current_app.config['ENABLE_SCHEDULER']:
             try:
-                scheduler.remove_job(f'query_{query_id}')
+                current_app.scheduler.remove_job(f'query_{query_id}')
             except JobLookupError:
                 pass
+        
+        flash('Search deleted', 'success')
     
     return redirect(url_for('queries.manage_queries'))
 

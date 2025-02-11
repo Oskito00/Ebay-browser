@@ -15,8 +15,13 @@ class EbayAPI:
     def __init__(self, marketplace='EBAY_GB'):
         self.token = None
         self.token_expiry = datetime.min.replace(tzinfo=timezone.utc)
-        self.client_id = os.getenv('EBAY_CLIENT_ID')
-        self.client_secret = os.getenv('EBAY_CLIENT_SECRET')
+        self.client_id = current_app.config.get('EBAY_CLIENT_ID')
+        self.client_secret = current_app.config.get('EBAY_CLIENT_SECRET')
+        
+        if not self.client_id or not self.client_secret:
+            raise ValueError(
+                "EBAY_CLIENT_ID and EBAY_CLIENT_SECRET must be set in the environment or config"
+            )
         self.token_url = "https://api.ebay.com/identity/v1/oauth2/token"
         self.base_url = "https://api.ebay.com/buy/browse/v1"
         self.headers = {
@@ -98,8 +103,12 @@ class EbayAPI:
         response.raise_for_status()
         return response.json()
     
-    def search_all_pages(self, keywords, filters=None):
+    def search_all_pages(self, keywords, filters=None, marketplace=None):
         """Search all pages and return parsed items as dictionaries"""
+        # Use marketplace if provided
+        if marketplace:
+            self.marketplace = marketplace
+        
         all_items = []
         total = None
         offset = 0

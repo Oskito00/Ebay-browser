@@ -52,8 +52,8 @@ class Query(db.Model):
     marketplace = db.Column(db.String(10), nullable=False, default='EBAY_GB')
     item_location = db.Column(db.String(10), nullable=False, default='GB')
     
-    items = db.relationship('Item', backref='query', lazy=True)
-
+    items = db.relationship('Item', backref='query', cascade='all, delete-orphan')
+    
 class Item(db.Model):
     __tablename__ = 'items'
     
