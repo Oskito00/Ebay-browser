@@ -105,6 +105,9 @@ class EbayAPI:
         offset = 0
         
         while True:
+            # Add dynamic rate limiting
+            time.sleep(current_app.config.get('EBAY_RATE_LIMIT', 1))  
+            
             # Fetch raw API response
             raw_response = self.search(keywords, filters, limit=200, offset=offset)
             
@@ -127,8 +130,6 @@ class EbayAPI:
                 break
             if offset >= total:
                 break
-            
-            time.sleep(1)  # Rate limiting
         
         return all_items
     

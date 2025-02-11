@@ -58,20 +58,21 @@ class Item(db.Model):
     __tablename__ = 'items'
     
     id = db.Column(db.Integer, primary_key=True)
-    ebay_id = db.Column(db.String(50), unique=True, nullable=False)
+    ebay_id = db.Column(db.String(50), index=True, unique=True, nullable=False)
+    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), index=True, nullable=False)
     title = db.Column(db.String(255))
     price = db.Column(db.Float)
     url = db.Column(db.String(512))
-    image_url = db.Column(db.String(512))
-    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
+    image_url = db.Column(db.String(255))
     last_updated = db.Column(db.DateTime) 
     currency = db.Column(db.String(10), nullable=False, default='GBP')
     legacy_id = db.Column(db.String(50))
     original_price = db.Column(db.Numeric(10,2))
     original_currency = db.Column(db.String(3))
     seller = db.Column(db.String(100))
-    seller_rating = db.Column(db.String(10))
+    seller_rating = db.Column(db.String(20))  # Changed from Float
     condition = db.Column(db.String(50))
     postal_code = db.Column(db.String(20))
     categories = db.Column(db.JSON)  # Requires PostgreSQL 9.4+
     listing_date = db.Column(db.DateTime)
+    location_country = db.Column(db.String(50))

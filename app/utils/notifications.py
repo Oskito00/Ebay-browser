@@ -11,23 +11,23 @@ class NotificationHandler:
         )
 
 class TelegramNotifier:
-    def __init__(self, token, chat_id):
-        self.token = token
+    def __init__(self, bot_token, chat_id):
+        self.bot_token = bot_token
         self.chat_id = chat_id
-        self.base_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
-    
-    def send(self, message):
+        
+    def send_message(self, message):
+        """Send formatted message through Telegram"""
         try:
             response = requests.post(
-                self.base_url,
+                f"https://api.telegram.org/bot{self.bot_token}/sendMessage",
                 json={
                     'chat_id': self.chat_id,
                     'text': message,
-                    'parse_mode': 'HTML'
-                },
-                timeout=5
+                    'parse_mode': 'HTML',
+                    'disable_web_page_preview': True
+                }
             )
-            return response.ok
+            return response.status_code == 200
         except Exception as e:
             current_app.logger.error(f"Telegram send failed: {str(e)}")
             return False
@@ -35,7 +35,7 @@ class TelegramNotifier:
 class NotificationManager:
     @staticmethod
     def send_item_notification(user, items):
-        if not NotificationHandler.should_notify(user, 'new_items'):
+        if not user.telegram_connected or not items:
             return False
             
         notifier = TelegramNotifier(
@@ -43,14 +43,19 @@ class NotificationManager:
             user.telegram_chat_id
         )
         
-        message = "<b>New eBay Items Found!</b>\n\n"
-        for item in items:
+        # Format message
+        message = "<b>New Items Found!</b>\n\n"
+        for item in items[:5]:  # Limit to 5 items per message
             message += (
                 f"🏷️ <a href='{item.url}'>{item.title}</a>\n"
-                f"💰 Price: {item.price} {item.currency}\n\n"
+                f"💰 {item.price} {item.currency}\n"
+                f"📍 {item.location_country or 'N/A'}\n\n"
             )
         
-        return notifier.send(message)
+        if len(items) > 5:
+            message += f"➕ {len(items)-5} more items found"
+            
+        return notifier.send_message(message)
     
     @staticmethod
     def send_price_alert(user, item, old_price):
@@ -64,7 +69,7 @@ class NotificationManager:
         
         message = NotificationManager.format_price_alert(user, item, old_price, item.price)
         
-        return notifier.send(message)
+        return notifier.send_message(message)
 
     @staticmethod
     def format_price_alert(user, item, old_price, new_price):
@@ -77,4 +82,4 @@ class NotificationManager:
         💰 From {old_price} {item.currency} to {new_price} {item.currency}
         🔗 {item.url}
         📊 <a href="{url_for('item_detail', item_id=item.id, _external=True)}">Price History</a>
-        """.strip() 
+        """.strip()

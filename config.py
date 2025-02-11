@@ -22,6 +22,7 @@ class Config:
         'hide_parameters': True
     }
     LOG_LEVEL = logging.WARNING
+    ENABLE_SCHEDULER = False  # Set to True when ready
 
     @classmethod
     def verify(cls):

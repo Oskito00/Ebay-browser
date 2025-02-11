@@ -4,10 +4,15 @@ from config import Config
 from flask_wtf.csrf import CSRFProtect
 import logging
 from logging.handlers import RotatingFileHandler
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 csrf = CSRFProtect()
 
+scheduler = None
+
 def create_app(config_class=Config):
+    global scheduler
     app = Flask(__name__)
     app.config.from_object(config_class)
     csrf.init_app(app)
@@ -23,7 +28,7 @@ def create_app(config_class=Config):
     encryptor.init_app(app)
     
     # Import models after extensions to avoid circular imports
-    from app.models import User
+    from app.models import User, Query
     
     # Register blueprints
     from app.routes.auth import bp as auth_bp
@@ -41,9 +46,21 @@ def create_app(config_class=Config):
     with app.app_context():
         db.create_all()  # Ensure tables exist
     
-    # # Initialize scheduler
-    # from app.monitor.scheduler import MonitorScheduler
-    # scheduler = MonitorScheduler()
-    # scheduler.start()
+    # Conditionally start scheduler
+    if app.config['ENABLE_SCHEDULER']:
+        from app.jobs.query_jobs import check_query
+        
+        scheduler = BackgroundScheduler(jobstores={'default': SQLAlchemyJobStore(engine=db.engine)})
+        
+        for query in Query.query.all():
+            scheduler.add_job(
+                check_query,
+                'interval',
+                minutes=query.check_interval,
+                args=[query.id],
+                id=f'query_{query.id}'
+            )
+        
+        scheduler.start()
     
     return app 

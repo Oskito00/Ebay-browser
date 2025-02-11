@@ -1,10 +1,15 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
+from app.jobs.query_jobs import check_query
 from app.models import Query, db
 from app.forms import QueryForm, DeleteForm  # Create this form if needed
 from decimal import Decimal
 from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError
+from app import scheduler
+from flask import current_app
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.jobstores.base import JobLookupError
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -39,6 +44,13 @@ def delete_query(query_id):
         db.session.delete(query)
         db.session.commit()
         flash('Search deleted', 'success')
+        
+        if current_app.config['ENABLE_SCHEDULER']:
+            try:
+                scheduler.remove_job(f'query_{query_id}')
+            except JobLookupError:
+                pass
+    
     return redirect(url_for('queries.manage_queries'))
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -81,6 +93,16 @@ def create_query():
                 print("Test query from DB:", test_query)
             except OperationalError as e:
                 print("DB Read Error:", str(e))
+            
+            if current_app.config['ENABLE_SCHEDULER']:
+                scheduler.add_job(
+                    check_query,
+                    'interval',
+                    minutes=query.check_interval,
+                    args=[query.id],
+                    id=f'query_{query.id}'
+                )
+            
             return redirect(url_for('queries.manage_queries'))
         except Exception as e:
             db.session.rollback()
