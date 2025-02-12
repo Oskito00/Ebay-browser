@@ -9,6 +9,9 @@
         <a href="{{ url_for('queries.manage_queries') }}" class="button">
             Manage Your Searches
         </a>
+        <a href="{{ url_for('telegram.send_test_notification') }}" class="button">
+            Send test notification
+        </a>
     {% else %}
         <p>Track prices and get alerts for eBay items</p>
         <div class="auth-options">

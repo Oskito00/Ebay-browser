@@ -7,6 +7,7 @@ load_dotenv()  # Load .env file
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'another-fallback-key')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL','sqlite:///app.db')
+    TIMEZONE = os.getenv('TIMEZONE', 'Europe/London')
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     EBAY_ENV = os.getenv('EBAY_ENV', 'sandbox')

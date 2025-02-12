@@ -10,6 +10,9 @@ from app import scheduler
 from flask import current_app
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.jobstores.base import JobLookupError
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.utils.notifications import NotificationManager
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -40,35 +43,50 @@ def edit_query(query_id):
 def delete_query(query_id):
     form = DeleteForm()
     
-    if form.validate_on_submit():
+    if not form.validate_on_submit():
+        flash('Invalid delete request', 'danger')
+        return redirect(url_for('queries.manage_queries'))
+    
+    try:
         query = Query.query.get_or_404(query_id)
         
-        # Check ownership
+        # Authorization check
         if query.user != current_user:
+            current_app.logger.warning(
+                f"User {current_user.id} tried to delete query {query_id} owned by {query.user.id}"
+            )
             abort(403)
         
-        # Delete from database
+        # # Remove scheduler job
+        # from app.cli.scheduler import remove_single_job
+        # remove_single_job(query_id)
+        
+        # Database cleanup
         db.session.delete(query)
         db.session.commit()
         
-        # Remove scheduler job
-        if current_app.config['ENABLE_SCHEDULER']:
-            try:
-                current_app.scheduler.remove_job(f'query_{query_id}')
-            except JobLookupError:
-                pass
-        
-        flash('Search deleted', 'success')
+        flash('Search deleted successfully', 'success')
+        current_app.logger.info(f"Deleted query {query_id}")
+
+    except JobLookupError as e:
+        current_app.logger.error(f"Job removal failed for query {query_id}: {str(e)}")
+        flash('Search deleted but scheduler job not found', 'warning')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.critical(f"Database error deleting query {query_id}: {str(e)}")
+        flash('Error deleting search', 'danger')
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error deleting query {query_id}: {str(e)}")
+        flash('An unexpected error occurred', 'danger')
     
     return redirect(url_for('queries.manage_queries'))
 
-@bp.route('/create', methods=['GET', 'POST'])
-@login_required
+@bp.route('/create_query', methods=['GET', 'POST'])
 def create_query():
     print("Current user authenticated:", current_user.is_authenticated)
     form = QueryForm()
     if request.method == 'GET':
-        form.check_interval.data = 5  # Default to 1 hour
+        form.check_interval.data = 5  # Default to 5 minutes
     print("Form data:", form.data)
     print("User ID:", current_user.id)
     if form.validate_on_submit():
@@ -103,18 +121,14 @@ def create_query():
             except OperationalError as e:
                 print("DB Read Error:", str(e))
             
-            if current_app.config['ENABLE_SCHEDULER']:
-                scheduler.add_job(
-                    check_query,
-                    'interval',
-                    minutes=query.check_interval,
-                    args=[query.id],
-                    id=f'query_{query.id}'
-                )
+            # # Add to scheduler
+            # from app.cli.scheduler import add_single_job
+            # add_single_job(query.id)
             
             return redirect(url_for('queries.manage_queries'))
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(f"Query creation failed: {str(e)}")
             flash('Error creating query: ' + str(e), 'danger')
     else:
         print("Form not validated. Errors:", form.errors)

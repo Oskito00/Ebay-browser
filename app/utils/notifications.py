@@ -58,6 +58,19 @@ class NotificationManager:
         return notifier.send_message(message)
     
     @staticmethod
+    def send_test_notification(user):
+        try:
+            notifier = TelegramNotifier(
+                current_app.config['TELEGRAM_BOT_TOKEN'],
+                user.telegram_chat_id
+            )
+            print("Trying to send test notification")
+            return notifier.send_message("Test notification sent")
+        except Exception as e:
+            print(f"Error sending test notification: {str(e)}")
+            return False
+    
+    @staticmethod
     def send_price_alert(user, item, old_price):
         if not NotificationHandler.should_notify(user, 'price_changes'):
             return False
@@ -83,3 +96,5 @@ class NotificationManager:
         🔗 {item.url}
         📊 <a href="{url_for('item_detail', item_id=item.id, _external=True)}">Price History</a>
         """.strip()
+    
+

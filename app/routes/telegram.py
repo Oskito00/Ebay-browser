@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
+from flask import Blueprint, current_app, render_template, request, jsonify, flash, redirect, url_for, abort
 from app.extensions import db, csrf, encryptor
 from app.forms import TelegramConnectForm, TelegramDisconnectForm
 from app.models import User
 from flask_login import current_user, login_required
 from flask_wtf.csrf import validate_csrf
 from wtforms import ValidationError
+
+from app.utils.notifications import NotificationManager
 
 bp = Blueprint('telegram', __name__, url_prefix='/telegram')
 
@@ -25,6 +27,15 @@ def connect():
         return redirect(url_for('main.settings'))
     
     return render_template('telegram/connect.html', form=form)
+
+@bp.route('/send_test_notification', methods=['GET'])
+@login_required
+def send_test_notification():
+    print("Current user:", current_user)
+    print("Current user telegram chat id:", current_user.telegram_chat_id)
+    print("Telegram bot token:", current_app.config['TELEGRAM_BOT_TOKEN'])
+    NotificationManager.send_test_notification(current_user)
+    return "Test notification sent"
 
 @bp.route('/connect', methods=['POST'])
 @login_required
