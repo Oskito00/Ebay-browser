@@ -1,3 +1,4 @@
+import time
 from app import db
 from app.models import Query, Item
 from app.utils.notifications import NotificationManager
@@ -118,6 +119,7 @@ def check_query(query_id):
             #TODO: Add dealing with aution items as well as buy it now items
             #TODO: Add notifications for price changes
             #TODO: Deal tith items dissapearing from the search results
+            time.sleep(2)
 
         except ConflictingIdError:
             app.logger.warning(f"Job query_{query_id} already running")

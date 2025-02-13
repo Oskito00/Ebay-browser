@@ -1,0 +1,3 @@
+curl -X GET "https://api.ebay.com/developer/analytics/v1_beta/user_rate_limit" \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+     -H "X-EBAY-C-MARKETPLACE-ID: EBAY_GB"
