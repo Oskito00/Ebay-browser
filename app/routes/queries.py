@@ -104,6 +104,8 @@ def create_query():
                 check_interval=form.check_interval.data,
                 min_price=Decimal(str(min_price)) if min_price else None,
                 max_price=Decimal(str(max_price)) if max_price else None,
+                required_keywords=form.required_keywords.data,
+                excluded_keywords=form.excluded_keywords.data,
                 item_location=form.item_location.data,
                 user_id=current_user.id
             )

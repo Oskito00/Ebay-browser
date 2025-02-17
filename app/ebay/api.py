@@ -8,6 +8,7 @@ from .constants import CONDITION_IDS, MARKETPLACE_IDS
 from app.models import Item
 from app import db
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ class EbayAPI:
         response.raise_for_status()
         return response.json()
     
-    def search_new_items(self, keywords, filters=None, marketplace=None):
+    def search_new_items(self, keywords, filters=None, marketplace=None, required_keywords=None, excluded_keywords=None):
         """
         Search first page of newly listed items
         :return: First 200 results (max eBay limit)
@@ -130,11 +131,12 @@ class EbayAPI:
 
         items = self.parse_response(response)
 
-        
+        # Filter items based on required and excluded keywords
+        filtered_items = self._filter_items(items, required_keywords, excluded_keywords)
 
-        return items
+        return filtered_items
     
-    def search_all_pages(self, keywords, filters=None, marketplace=None):
+    def search_all_pages(self, keywords, filters=None, marketplace=None, required_keywords=None, excluded_keywords=None):
         """Search all pages and return parsed items as dictionaries"""
         # Use marketplace if provided
         if marketplace:
@@ -171,7 +173,10 @@ class EbayAPI:
             if offset >= total:
                 break
         
-        return all_items
+        # Filter items based on required and excluded keywords
+        filtered_items = self._filter_items(all_items, required_keywords, excluded_keywords)
+        
+        return filtered_items
     
     def _build_filter(self, filters):
         filter_parts = [
@@ -198,6 +203,38 @@ class EbayAPI:
             filter_parts.append(price_filter)
 
         return ','.join(filter_parts)
+    
+    def _filter_items(self, items, required_keywords, excluded_keywords):
+        # Normalize inputs
+        req_kws = {kw.strip().lower() for kw in required_keywords.split(',') if kw.strip()}
+        excl_kws = {ekw.strip().lower() for ekw in excluded_keywords.split(',') if ekw.strip()}
+        
+        # Preprocess titles
+        processed = []
+        for item in items:
+            title = item['title'].lower()
+            words = set(title.split())
+            processed.append((item, title, words))
+        
+        # Filter logic
+        filtered = []
+        for item, title, words in processed:
+            # Required: all keywords present as whole words
+            req_ok = all(
+                re.search(rf'\b{re.escape(kw)}\b', title) 
+                for kw in req_kws
+            ) if req_kws else True
+            
+            # Excluded: none present as substrings
+            excl_ok = not any(
+                ekw in title
+                for ekw in excl_kws
+            ) if excl_kws else True
+            
+            if req_ok and excl_ok:
+                filtered.append(item)
+        
+        return filtered
 
     def parse_response(self, response):
         items = []

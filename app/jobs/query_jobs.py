@@ -32,6 +32,8 @@ def check_query(query_id):
                         'max_price': query.max_price,
                         'item_location': query.item_location
                     },
+                    required_keywords=query.required_keywords,
+                    excluded_keywords=query.excluded_keywords,
                     marketplace=query.marketplace
                 )
                 

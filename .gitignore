@@ -4,3 +4,5 @@ known_items.json
 item_details.json
 venv/
 app/tests/test_telegram_notification.py
+*.sql
+*.db

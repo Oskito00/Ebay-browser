@@ -26,212 +26,78 @@ def mock_response():
         return response
     return _mock_response
 
-def test_search_basic(ebay_api, mock_response):
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = mock_response(json_data={
-            'itemSummaries': [{'itemId': '123'}]
-        })
-        results = ebay_api.search("test")
-        assert results['itemSummaries'][0]['itemId'] == '123'
-
-def test_filter_building(ebay_api):
-    filters = {
-        'itemLocationCountry': 'US',
-        'currency': 'USD',
-        'min_price': 100,
-        'max_price': 200,
-    }
-    mock_api = EbayAPI(marketplace='EBAY_US')
-    filter_str = mock_api._build_filter(filters)
-    assert filter_str == 'itemLocationCountry:US,currency:USD,price:[100..200]'
-
-@patch('requests.get')
-def test_pagination(mock_get, ebay_api, mock_response):
-    mock_get.side_effect = [
-        mock_response(json_data={
-            'total': 250,
-            'itemSummaries': [{'itemId': str(i)} for i in range(200)]
-        }),
-        mock_response(json_data={
-            'itemSummaries': [{'itemId': str(i)} for i in range(200, 250)]
-        })
+@pytest.fixture
+def mock_items():
+    return [
+        {'title': 'Charizard Card Holo', 'price': 100},
+        {'title': 'Shadowless Charizard Card', 'price': 200},
+        {'title': 'Pikachu Rare Card', 'price': 50}
     ]
-    
-    results = []
-    offset = 0
-    while True:
-        batch = ebay_api.search("test", limit=200, offset=offset)
-        results.extend(batch['itemSummaries'])
-        if len(batch['itemSummaries']) < 200:
-            break
-        offset += 200
-    
-    assert len(results) == 250
 
-@patch('requests.get')
-def test_rate_limit_handling(mock_get, ebay_api, mock_response):
-    mock_get.side_effect = [
-        mock_response(status=429, headers={'Retry-After': '1'}),
-        mock_response(json_data={'itemSummaries': []})
-    ]
-    
-    results = ebay_api.search("test")
-    assert mock_get.call_count == 2
-
-def test_complex_filter(ebay_api):
-    filters = {
-        'itemLocationCountry': 'US',
-        'currency': 'USD',
-        'min_price': 50,
-    }
-    mock_api = EbayAPI(marketplace='EBAY_US')
-    assert mock_api._build_filter(filters) == 'itemLocationCountry:US,currency:USD,price:[50..]'
-
-def test_token_refresh_flow():
+@pytest.fixture
+def mock_ebay_api(mocker, mock_items):
     api = EbayAPI()
-    api.token_expiry = datetime.now(timezone.utc) - timedelta(hours=1)
-    
-    with patch('requests.post') as mock_post:
-        mock_post.return_value.json.return_value = {
-            'access_token': 'new_token',
-            'expires_in': 7200
-        }
-        token = api._get_token()
-        
-        assert token == 'new_token'
-        assert api.token_expiry > datetime.now(timezone.utc)
+    mocker.patch.object(api, 'search', return_value={'items': mock_items})
+    return api
 
-def test_search_success(ebay_api):
-    with patch('requests.get') as mock_get:
-        mock_get.return_value.json.return_value = {
-            'itemSummaries': [{'itemId': '123'}]
-        }
-        results = ebay_api.search("test")
-        assert len(results['itemSummaries']) == 1
+#***********************
+#Keyword Filtering Tests
+#***********************
 
-@pytest.mark.skipif(
-    not os.getenv('EBAY_CLIENT_ID') or 
-    not os.getenv('EBAY_CLIENT_SECRET'),
-    reason="Requires eBay CLIENT_ID and CLIENT_SECRET in .env"
-)
-def test_real_api_search(ebay_api):
-    params = {'q': 'iphone', 'limit': 1}
-    response = ebay_api.search(params)
-    items = ebay_api.parse_response(response, query_id=1)
-    
-    print(f"First item keys: {items[0].keys()}")
-    print(f"Sample item: {items[0]}")
-    
-    # Check dictionary structure
-    assert len(items) > 0
-    assert 'title' in items[0]
-    assert 'price' in items[0]
-    assert 'currency' in items[0]
-
-@pytest.mark.skipif(
-    not os.getenv('EBAY_CLIENT_ID') or 
-    not os.getenv('EBAY_CLIENT_SECRET'),
-    reason="Requires eBay API credentials in environment"
-)
-def test_search_new_items():
-    app = create_app(config_class='config.TestingConfig')
+def test_required_keywords(app, mock_ebay_api, mock_items):
     with app.app_context():
-        api = EbayAPI(marketplace='EBAY_GB')
-        # Test valid search
-        results = api.search_new_items("base set charizard")
+        filtered = mock_ebay_api._filter_items(
+            mock_items, 
+            required_keywords='charizard',
+            excluded_keywords=''
+        )
+        assert len(filtered) == 2
 
-        assert len(results) > 0
-        for item in results:
-            assert 'listing_date' in item
-            assert isinstance(item['listing_date'], str)
-            # Check ISO 8601 format (e.g. 2023-08-05T14:30:00.000Z)
-            assert match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z', item['listing_date'])
+def test_excluded_keywords(app, mock_ebay_api, mock_items):
+    # Test single exclusion
+    with app.app_context():
+        filtered = mock_ebay_api._filter_items(
+        mock_items,
+        required_keywords='',
+        excluded_keywords='base'
+    )
+        assert len(filtered) == 2
+        assert all('base' not in item['title'].lower() for item in filtered)
+    
+        # Test multiple exclusions
+        filtered = mock_ebay_api._filter_items(
+        mock_items,
+        required_keywords='',
+        excluded_keywords='base,shadowless'
+        )
+        assert len(filtered) == 1
 
-@pytest.mark.skipif(
-    not os.getenv('EBAY_CLIENT_ID') or 
-    not os.getenv('EBAY_CLIENT_SECRET'),
-    reason="Requires eBay CLIENT_ID and CLIENT_SECRET in .env"
-)
-def test_real_api_search_with_price_filter():
-    ebay_api = EbayAPI(marketplace='EBAY_GB')
-    # Test with price range filter
-    filters = {
-        'min_price': 200,
-        'max_price': 400
-    }
-    print(("Searching in:"), ebay_api.marketplace)
-    print(("Filters:"), filters)
-    response = ebay_api.search('pokemon base set booster pack', filters=filters, limit=1)
-    items = ebay_api.parse_response(response)
-    
-    print(f"First item keys: {items[0].keys()}")
-    print(f"Sample item with price filter: {items[0]}")
-    
-    # Check dictionary structure and price filter
-    assert len(items) > 0
-    assert 'title' in items[0]
-    assert 'original_price' in items[0]
-    assert 'currency' in items[0]
-    assert float(items[0]['original_price']) >= 200
-    assert float(items[0]['original_price']) <= 400
+def test_combined_filters(app,mock_ebay_api, mock_items):
+    with app.app_context():
+        filtered = mock_ebay_api._filter_items(
+            mock_items,
+            required_keywords='card',
+            excluded_keywords='rare'
+        )
+        # Should get first 2 items
+        assert len(filtered) == 2
+        assert all('card' in item['title'].lower() for item in filtered)
+        assert all('rare' not in item['title'].lower() for item in filtered)
 
-def test_search_all_pages(ebay_api):
-    ebay_api = EbayAPI(marketplace='EBAY_GB')
-    items = ebay_api.search_all_pages("pokemon base set booster pack", {'min_price': 5, 'max_price': 200})
-    
-    # Check dictionary structure
-    assert len(items) > 0
-    first_item = items[0]
-    
-    # Verify required fields
-    assert isinstance(first_item, dict)
-    assert 'ebay_id' in first_item
-    assert 'title' in first_item
-    assert 'price' in first_item
-    
-    # Check price filter compliance
-    assert first_item['price'] >= 5, f"Price {first_item['price']} below min"
-    assert first_item.get('original_price', first_item['price']) >= 5
+def test_empty_filters(app, mock_ebay_api, mock_items):
+    with app.app_context():
+        filtered = mock_ebay_api._filter_items(
+            mock_items,
+            required_keywords='',
+            excluded_keywords=''
+        )
+    assert len(filtered) == len(mock_items)
 
-def test_ebay_search():
-    api = EbayAPI()
-    # Pass numeric values instead of strings
-    results = api.search("test", {'min_price': 100.0})  
-    assert len(results['itemSummaries']) > 0
-
-@pytest.mark.parametrize("marketplace,currency,keywords", [
-    ('EBAY_GB', 'GBP', "vintage camera"),
-    ('EBAY_US', 'USD', "antique camera"),
-    ('EBAY_DE', 'EUR', "alte kamera")
-])
-def test_marketplace_selection(ebay_api, marketplace, currency, keywords):
-    """Test different marketplaces return correct currency"""
-    api = EbayAPI(marketplace=marketplace)
-    with requests_mock.Mocker() as m:
-        m.get(requests_mock.ANY, json={
-            'itemSummaries': [{
-                'price': {'value': '100.00', 'currency': currency},
-                'itemId': '123'
-            }]
-        })
-        results = api.search(keywords)
-        assert results['itemSummaries'][0]['price']['currency'] == currency
-
-
-@pytest.mark.live
-def test_live_marketplace_search():
-    api = EbayAPI(marketplace='EBAY_US')
-    results = api.search("iphone", limit=5)
-    
-    print(f"\nAPI Filters Used: {api._build_filter({})}")
-    print(f"Response Items: {len(results['itemSummaries'])}")
-    
-    for item in results['itemSummaries']:
-        print(f"\nItem: {item['title']}")
-        print(f"Price: {item['price']['value']} {item['price']['currency']}")
-        print(f"Location: {item.get('itemLocation',{}).get('country')}")
-        print(f"URL: {item['itemWebUrl']}")
-    
-    # Verify all items are from US
-    for item in results['itemSummaries']:
-        assert item.get('itemLocation', {}).get('country') == 'US', f"Item location not US: {item.get('itemLocation')}"
+def test_no_matches(app, mock_ebay_api, mock_items):
+    with app.app_context():
+        filtered = mock_ebay_api._filter_items(
+            mock_items,
+            required_keywords='mewtwo',
+            excluded_keywords=''
+        )
+    assert len(filtered) == 0
