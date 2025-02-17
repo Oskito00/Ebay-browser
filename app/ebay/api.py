@@ -36,6 +36,7 @@ class EbayAPI:
         self.country_code = MARKETPLACE_IDS[marketplace]['location']
         self.currency = MARKETPLACE_IDS[marketplace]['currency']
         self._get_token()  # Fetch initial token
+        self.session = requests.Session()
     
     def _token_needs_refresh(self):
         """Check if token needs refresh (60 second buffer)"""
@@ -95,7 +96,8 @@ class EbayAPI:
         if filters:
             params['filter'] = self._build_filter(filters)
         
-        response = requests.get(
+        # Use persistent session
+        response = self.session.get(
             f"{self.base_url}/item_summary/search",
             headers=headers,
             params=params
@@ -133,7 +135,7 @@ class EbayAPI:
         # Use marketplace if provided
         if marketplace:
             self.marketplace = marketplace
-        
+                
         all_items = []
         total = None
         offset = 0
