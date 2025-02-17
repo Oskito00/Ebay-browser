@@ -26,6 +26,18 @@
         {{ form.keywords.label }}
         {{ form.keywords(class="form-control") }}
     </div>
+
+    <!-- Required Keywords -->
+    <div class="form-group">
+        {{ form.required_keywords.label }}
+        {{ form.required_keywords(class="form-control") }}
+    </div>
+
+    <!-- Excluded Keywords -->
+    <div class="form-group">
+        {{ form.excluded_keywords.label }}
+        {{ form.excluded_keywords(class="form-control") }}
+    </div>
     
     <!-- Check Interval -->
     <div class="form-group">

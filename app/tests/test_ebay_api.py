@@ -235,5 +235,3 @@ def test_live_marketplace_search():
     # Verify all items are from US
     for item in results['itemSummaries']:
         assert item.get('itemLocation', {}).get('country') == 'US', f"Item location not US: {item.get('itemLocation')}"
-    
-    # Assertions remain the same

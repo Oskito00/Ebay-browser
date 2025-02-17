@@ -128,7 +128,11 @@ class EbayAPI:
             sort_order='newlyListed'
         )
 
-        return self.parse_response(response)
+        items = self.parse_response(response)
+
+        
+
+        return items
     
     def search_all_pages(self, keywords, filters=None, marketplace=None):
         """Search all pages and return parsed items as dictionaries"""

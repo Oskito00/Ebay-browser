@@ -42,6 +42,8 @@ class Query(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     min_price = db.Column(db.Numeric(10,2))
     max_price = db.Column(db.Numeric(10,2))
+    required_keywords = db.Column(db.String(255))
+    excluded_keywords = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
     is_active = db.Column(db.Boolean, default=False)

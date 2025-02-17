@@ -38,6 +38,8 @@ class QueryForm(FlaskForm):
         'Check Every (minutes)', 
         validators=[InputRequired(), NumberRange(min=1, max=1440)]
     )
+    required_keywords = StringField('Required Keywords', validators=[Optional()])
+    excluded_keywords = StringField('Excluded Keywords', validators=[Optional()])
     marketplace = SelectField(
     'Marketplace',
     choices=[
