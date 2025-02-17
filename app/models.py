@@ -44,6 +44,8 @@ class Query(db.Model):
     max_price = db.Column(db.Numeric(10,2))
     required_keywords = db.Column(db.String(255))
     excluded_keywords = db.Column(db.String(255))
+    condition = db.Column(db.String(50))
+    buying_options = db.Column(db.String(50), default='FIXED_PRICE|AUCTION')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
     is_active = db.Column(db.Boolean, default=False)

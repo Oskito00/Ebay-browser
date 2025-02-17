@@ -57,6 +57,26 @@ class QueryForm(FlaskForm):
         default='GB'
     )
 
+    condition = SelectField(
+        'Condition',
+        choices=[
+            ('', 'Any Condition'),  # Default
+            ('NEW', 'New'),
+            ('USED', 'Used'),
+        ],
+        default=''
+    )
+
+    buying_options = SelectField(
+        'Buying Options',
+        choices=[
+            ('FIXED_PRICE|AUCTION', 'Any'),  # Default
+            ('FIXED_PRICE', 'Buy It Now'),
+            ('AUCTION', 'Auction'),
+        ],
+        default='FIXED_PRICE|AUCTION'
+    )
+
     submit = SubmitField('Save Search')
 
 class DeleteForm(FlaskForm):

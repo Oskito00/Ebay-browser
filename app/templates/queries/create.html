@@ -56,7 +56,26 @@
         {{ form.max_price(class="form-control") }}
     </div>
 
-      
+    <!-- Condition Filters -->
+    <div class="form-group">
+        <h3>Condition</h3>
+        <select id="condition" name="condition" class="condition_select">
+            <option value="">Any Condition</option>
+          <option value="NEW">New</option>
+          <option value="USED">Used</option>
+        </select>
+    </div>
+
+    <!-- Buying options -->
+    <div class="form-group">
+        <h3>Buying Options</h3>
+        <select id="buying_options" name="buying_options" class="buying_options_select">
+            <option value="FIXED_PRICE|AUCTION">Any</option>
+          <option value="FIXED_PRICE">Buy It Now</option>
+          <option value="AUCTION">Auction</option>
+        </select>
+    </div>
+
       <!-- Location Filters -->
       <div class="filter-section">
         <h3>Item Location</h3>

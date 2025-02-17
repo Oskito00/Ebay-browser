@@ -30,7 +30,8 @@ def check_query(query_id):
                     filters={
                         'min_price': query.min_price,
                         'max_price': query.max_price,
-                        'item_location': query.item_location
+                        'item_location': query.item_location,
+                        'condition': query.condition
                     },
                     required_keywords=query.required_keywords,
                     excluded_keywords=query.excluded_keywords,
@@ -69,9 +70,12 @@ def check_query(query_id):
                 filters={
                     'min_price': query.min_price,
                     'max_price': query.max_price,
-                    'item_location': query.item_location
+                    'item_location': query.item_location,
+                    'condition': query.condition
                 },
-                marketplace=query.marketplace
+                marketplace=query.marketplace,
+                excluded_keywords=query.excluded_keywords,
+                required_keywords=query.required_keywords,
             )
             for item in items:
                 if item['ebay_id'] in existing_urls:

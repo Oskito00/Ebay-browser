@@ -106,6 +106,8 @@ def create_query():
                 max_price=Decimal(str(max_price)) if max_price else None,
                 required_keywords=form.required_keywords.data,
                 excluded_keywords=form.excluded_keywords.data,
+                condition=form.condition.data,
+                buying_options=form.buying_options.data,
                 item_location=form.item_location.data,
                 user_id=current_user.id
             )

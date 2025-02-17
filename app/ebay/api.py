@@ -180,11 +180,20 @@ class EbayAPI:
     
     def _build_filter(self, filters):
         filter_parts = [
+            f"itemLocationCountry:{filters.get('item_location', self.country_code)}",
+            f"priceCurrency:{self.currency}"
         ]
-
-        filter_parts.append(f"itemLocationCountry:{filters.get('item_location', self.country_code)}")
-        filter_parts.append(f"priceCurrency:{self.currency}")
-
+        
+        # Buying options filter
+        buying_opt = filters.get('buying_options', 'FIXED_PRICE|AUCTION')
+        if buying_opt != 'FIXED_PRICE|AUCTION':
+            filter_parts.append(f"buyingOptions:{{{buying_opt}}}")
+        
+        # Condition filter
+        condition = filters.get('condition')
+        if condition in ['NEW', 'USED']:
+            filter_parts.append(f"conditions:{{{condition}}}")
+        
         # Handle price range correctly
         min_price = filters.get('min_price')
         max_price = filters.get('max_price')

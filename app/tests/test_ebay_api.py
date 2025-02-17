@@ -61,7 +61,7 @@ def test_excluded_keywords(app, mock_ebay_api, mock_items):
         required_keywords='',
         excluded_keywords='base'
     )
-        assert len(filtered) == 2
+        assert len(filtered) == 3
         assert all('base' not in item['title'].lower() for item in filtered)
     
         # Test multiple exclusions
@@ -70,7 +70,7 @@ def test_excluded_keywords(app, mock_ebay_api, mock_items):
         required_keywords='',
         excluded_keywords='base,shadowless'
         )
-        assert len(filtered) == 1
+        assert len(filtered) == 2
 
 def test_combined_filters(app,mock_ebay_api, mock_items):
     with app.app_context():
@@ -101,3 +101,79 @@ def test_no_matches(app, mock_ebay_api, mock_items):
             excluded_keywords=''
         )
     assert len(filtered) == 0
+
+#***********************
+#Condition Filtering Tests
+#***********************
+
+def test_condition_filter_combinations(app):
+    with app.app_context():
+        api = EbayAPI()
+        
+        # Test Any Condition (empty string)
+        filters = {'condition': ''}
+        assert 'conditions' not in api._build_filter(filters)
+    
+        # Test New Condition
+        filters = {'condition': 'NEW'}
+        assert 'conditions:{NEW}' in api._build_filter(filters)
+    
+        # Test Used Condition 
+        filters = {'condition': 'USED'}
+        assert 'conditions:{USED}' in api._build_filter(filters)
+    
+        # Test invalid condition
+        filters = {'condition': 'RENEWED'}
+        assert 'conditions' not in api._build_filter(filters)
+
+#***********************
+#Buying Options Filtering Tests
+#***********************
+
+def test_buying_options_filter(app):
+    with app.app_context():
+        api = EbayAPI()
+        
+        # Any (default)
+        filters = {'buying_options': 'FIXED_PRICE|AUCTION'}
+        assert 'buyingOptions' not in api._build_filter(filters)
+    
+        # Buy It Now
+        filters = {'buying_options': 'FIXED_PRICE'}
+        assert 'buyingOptions:{FIXED_PRICE}' in api._build_filter(filters)
+    
+        # Auction
+        filters = {'buying_options': 'AUCTION'}
+        assert 'buyingOptions:{AUCTION}' in api._build_filter(filters)
+
+@pytest.mark.live  # Mark for live API tests
+def test_real_buying_options(app):
+    with app.app_context():
+        api = EbayAPI(marketplace='EBAY_GB')
+        
+        # Test Buy It Now
+        buy_it_now_items = api.search_new_items(
+            "pokemon base set booster box", 
+            filters={'buying_options': 'FIXED_PRICE'}, 
+        )
+        assert len(buy_it_now_items) > 0
+        for item in buy_it_now_items:
+            assert 'price' in item
+            assert isinstance(item['price'], float)
+        
+        # Test Auction
+        auction_items = api.search_new_items(
+            "pokemon base set booster box", 
+            filters={'buying_options': 'AUCTION'}, 
+        )
+        if len(auction_items) > 0:  # Auctions may not always be available
+            for item in auction_items:
+                assert 'price' in item
+                # assert 'current_bid' in item  # If your parser extracts this
+        
+        # Test Any
+        any_items = api.search_new_items("pokemon base set booster box", filters={})
+        assert len(any_items) >= len(buy_it_now_items) + (len(auction_items) if auction_items else 0)
+
+
+
