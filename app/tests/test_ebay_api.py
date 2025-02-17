@@ -107,53 +107,6 @@ def test_search_success(ebay_api):
         results = ebay_api.search("test")
         assert len(results['itemSummaries']) == 1
 
-def test_filter_parsing(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = {
-        'min_price': 100,
-        'max_price': 200,
-        'condition': ['new']
-    }
-    params = ebay_api.build_ebay_params(query)
-    assert params['filter'] == 'price:[100..200],conditionIds:{1000}'
-
-# New tests below
-def test_min_price_only(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = {'min_price': 50}
-    params = ebay_api.build_ebay_params(query)
-    assert params['filter'] == 'price:[50..]'
-
-def test_multiple_conditions(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = {'condition': ['used', 'refurbished']}
-    params = ebay_api.build_ebay_params(query)
-    assert 'conditionIds:{3000,2000}' in params['filter']
-
-def test_no_filters(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = None
-    params = ebay_api.build_ebay_params(query)
-    assert 'filter' not in params
-
-def test_max_price_only(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = {'max_price': 300}
-    params = ebay_api.build_ebay_params(query)
-    assert params['filter'] == 'price:[..300]'
-
-def test_both_prices(ebay_api):
-    query = Mock()
-    query.keywords = "test"
-    query.filters = {'min_price': 100, 'max_price': 200}
-    params = ebay_api.build_ebay_params(query)
-    assert params['filter'] == 'price:[100..200]'
-
 @pytest.mark.skipif(
     not os.getenv('EBAY_CLIENT_ID') or 
     not os.getenv('EBAY_CLIENT_SECRET'),

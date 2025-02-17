@@ -68,8 +68,8 @@ class EbayAPI:
         )
         return self.token
 
-    def search(self, keywords, filters=None, limit=200, offset=0):
-        """Search with pagination support"""
+    def search(self, keywords, filters=None, limit=200, offset=0, sort_order=None):
+        """Search with optional sorting"""
         # Initialize filters as empty dict if None
         filters = filters or {}
         
@@ -84,10 +84,12 @@ class EbayAPI:
         params = {
             'q': keywords,
             'filter': self._build_filter(filters),
-            'sort': 'newlyListed',
             'limit': limit,
             'offset': offset
         }
+        
+        if sort_order:  # Add sorting only if specified
+            params['sort'] = sort_order
         
         response = requests.get(
             f"{self.base_url}/item_summary/search",
@@ -102,6 +104,16 @@ class EbayAPI:
             return self.search(keywords, filters, limit, offset)
         response.raise_for_status()
         return response.json()
+    
+    def search_new_items(self, keywords, filters=None, marketplace=None):
+        """Search explicitly sorted by new listings"""
+        return self.search(
+            keywords,
+            filters,
+            limit=200,
+            offset=0,
+            sort_order='newlyListed'  # Force sort
+        )
     
     def search_all_pages(self, keywords, filters=None, marketplace=None):
         """Search all pages and return parsed items as dictionaries"""
@@ -165,52 +177,8 @@ class EbayAPI:
                 price_filter += f"..{max_price}"
             price_filter += ']'
             filter_parts.append(price_filter)
-        
 
-        
         return ','.join(filter_parts)
-
-    def build_ebay_params(self, query):
-        params = {
-            'q': query.keywords,
-            'sort': 'price',
-            'limit': query.limit,
-            'filter': []
-        }
-        
-        if query.filters:
-            # Price range
-            price_parts = []
-            if 'min_price' in query.filters:
-                price_parts.append(f"{query.filters['min_price']}")
-            else:
-                price_parts.append("")  # Empty min price
-            
-            if 'max_price' in query.filters:
-                price_parts.append(f"{query.filters['max_price']}")
-            else:
-                price_parts.append("")  # Empty max price
-            
-            price_filter = f"price:[{'..'.join(price_parts)}]"
-            if any(price_parts):
-                params['filter'].append(price_filter)
-            
-            # Condition
-            if 'condition' in query.filters:
-                condition_ids = [CONDITION_IDS[c] for c in query.filters['condition']]
-                params['filter'].append(f"conditionIds:{{{','.join(condition_ids)}}}")
-            
-            # Join filters
-            if params['filter']:
-                params['filter'] = ','.join(params['filter'])
-            else:
-                del params['filter']
-        
-        # After building filters
-        if not params['filter']:
-            del params['filter']
-        
-        return params 
 
     def parse_response(self, response):
         items = []
@@ -254,5 +222,5 @@ class EbayAPI:
         except (TypeError, ValueError):
             return 0.0
 
-__all__ = ['EbayAPI', 'parse_ebay_response']
+__all__ = ['EbayAPI']
 
