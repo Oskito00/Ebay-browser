@@ -2,7 +2,7 @@ import time
 from app import db
 from app.models import Query, Item
 from app.utils.notifications import NotificationManager
-from app.utils.scraper import scrape_ebay
+from app.utils.scraper import scrape_ebay, scrape_new_items
 from flask import current_app
 from sqlalchemy import select
 from app import create_app
@@ -62,7 +62,7 @@ def check_query(query_id):
             existing_urls = {item.ebay_id for item in query.items}
             new_items = []
             
-            items = scrape_ebay(
+            items = scrape_new_items(
                 keywords=query.keywords,
                 filters={
                     'min_price': query.min_price,

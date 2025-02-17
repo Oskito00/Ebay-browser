@@ -47,14 +47,3 @@ def test_marketplace_filtering(marketplace, expected_currency, expected_country)
         request = mock_get.call_args[1]['params']
         assert f"itemLocationCountry:{expected_country}" in request['filter']
         assert f"currency:{expected_currency}" in request['filter']
-
-
-
-# def test_live_german_search():
-#     api = EbayAPI(marketplace='EBAY_DE')
-#     results = api.search("kamera", {'item_location': 'DE'})
-    
-#     assert len(results) > 0
-#     for item in results:
-#         assert item['currency'] == 'EUR'
-#         assert item['country'] == 'DE'

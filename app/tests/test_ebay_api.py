@@ -1,5 +1,6 @@
 import logging
 import os
+from re import match
 import pytest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
@@ -9,6 +10,7 @@ from app.models import Query, Item
 from app import db
 import requests_mock
 import json
+from app import create_app
 
 @pytest.fixture
 def ebay_api():
@@ -125,6 +127,25 @@ def test_real_api_search(ebay_api):
     assert 'title' in items[0]
     assert 'price' in items[0]
     assert 'currency' in items[0]
+
+@pytest.mark.skipif(
+    not os.getenv('EBAY_CLIENT_ID') or 
+    not os.getenv('EBAY_CLIENT_SECRET'),
+    reason="Requires eBay API credentials in environment"
+)
+def test_search_new_items():
+    app = create_app(config_class='config.TestingConfig')
+    with app.app_context():
+        api = EbayAPI(marketplace='EBAY_GB')
+        # Test valid search
+        results = api.search_new_items("base set charizard")
+
+        assert len(results) > 0
+        for item in results:
+            assert 'listing_date' in item
+            assert isinstance(item['listing_date'], str)
+            # Check ISO 8601 format (e.g. 2023-08-05T14:30:00.000Z)
+            assert match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z', item['listing_date'])
 
 @pytest.mark.skipif(
     not os.getenv('EBAY_CLIENT_ID') or 

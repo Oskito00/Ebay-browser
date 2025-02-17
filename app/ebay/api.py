@@ -83,13 +83,17 @@ class EbayAPI:
         
         params = {
             'q': keywords,
-            'filter': self._build_filter(filters),
             'limit': limit,
             'offset': offset
         }
         
-        if sort_order:  # Add sorting only if specified
+        # Add sort before filter
+        if sort_order:
             params['sort'] = sort_order
+        
+        # Add filters if present
+        if filters:
+            params['filter'] = self._build_filter(filters)
         
         response = requests.get(
             f"{self.base_url}/item_summary/search",
@@ -106,14 +110,23 @@ class EbayAPI:
         return response.json()
     
     def search_new_items(self, keywords, filters=None, marketplace=None):
-        """Search explicitly sorted by new listings"""
-        return self.search(
-            keywords,
-            filters,
+        """
+        Search first page of newly listed items
+        :return: First 200 results (max eBay limit)
+        :note: Pagination disabled for this method
+        """
+        if marketplace:
+            self.marketplace = marketplace
+
+        response = self.search(
+            keywords=keywords,
+            filters=filters,
             limit=200,
             offset=0,
-            sort_order='newlyListed'  # Force sort
+            sort_order='newlyListed'
         )
+
+        return self.parse_response(response)
     
     def search_all_pages(self, keywords, filters=None, marketplace=None):
         """Search all pages and return parsed items as dictionaries"""

@@ -34,6 +34,10 @@ class Config:
         if not cls.EBAY_CLIENT_ID or not cls.EBAY_CLIENT_SECRET:
             raise ValueError("Missing eBay API credentials")
 
+    @classmethod
+    def get(cls, key, default=None):
+        return getattr(cls, key, default)
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SERVER_NAME = 'localhost:5000'
@@ -45,13 +49,10 @@ class ProductionConfig(Config):
     PREFERRED_URL_SCHEME = 'https'
     WTF_CSRF_SSL_STRICT = True  # Enforce HTTPS for CSRF
 
-class TestConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'postgresql://test_user@localhost/test_db'
 
 class TestingConfig(Config):
-    EBAY_CLIENT_ID = 'test-client-id'
-    EBAY_CLIENT_SECRET = 'test-secret'
+    EBAY_CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
+    EBAY_CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
     TESTING = True
@@ -60,5 +61,6 @@ class TestingConfig(Config):
 
 config = {
     'development': Config,
-    'default': Config
+    'default': Config,
+    'testing': TestingConfig
 } 
