@@ -185,8 +185,6 @@ class EbayAPI:
         filter_parts.append(f"itemLocationCountry:{filters.get('item_location', self.country_code)}")
         filter_parts.append(f"priceCurrency:{self.currency}")
 
-
-        
         # Handle price range correctly
         min_price = filters.get('min_price')
         max_price = filters.get('max_price')
@@ -205,9 +203,13 @@ class EbayAPI:
         return ','.join(filter_parts)
     
     def _filter_items(self, items, required_keywords, excluded_keywords):
+        # Convert None to empty string
+        required = required_keywords or ''
+        excluded = excluded_keywords or ''
+        
         # Normalize inputs
-        req_kws = {kw.strip().lower() for kw in required_keywords.split(',') if kw.strip()}
-        excl_kws = {ekw.strip().lower() for ekw in excluded_keywords.split(',') if ekw.strip()}
+        req_kws = {kw.strip().lower() for kw in required.split(',') if kw.strip()}
+        excl_kws = {ekw.strip().lower() for ekw in excluded.split(',') if ekw.strip()}
         
         # Preprocess titles
         processed = []
