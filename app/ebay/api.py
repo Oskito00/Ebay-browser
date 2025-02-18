@@ -49,20 +49,6 @@ class EbayAPI:
         if not self.token:
             return True  # No token exists
         return datetime.now(timezone.utc) > (self.token_expiry - timedelta(seconds=60))
-    
-    def get_rate_limit_status(self):
-        """Get simplified rate limit status"""
-        try:
-            response = self.session.get(
-                'https://api.ebay.com/developer/analytics/v1_beta/user_rate_limit',
-                headers={'Authorization': f'Bearer {self.token}'}
-            )
-            response.raise_for_status()
-            return response.json()
-        except HTTPError as e:
-            if e.response.status_code == 403:
-                raise ValueError("Missing required API scope")
-            return {}
 
     def _get_token(self):
         """Main token acquisition method"""
@@ -71,14 +57,17 @@ class EbayAPI:
         
         # Refresh token if needed
         auth = (self.client_id, self.client_secret)
+        data = {
+            'grant_type': 'client_credentials',
+            'scope': ' '.join([
+                'https://api.ebay.com/oauth/api_scope',  # Public data
+            ])
+        }
         response = requests.post(
             self.token_url,
             auth=auth,
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
-            data={
-                'grant_type': 'client_credentials',
-                'scope': 'https://api.ebay.com/oauth/api_scope'
-            }
+            data=data
         )
         response.raise_for_status()
         
@@ -88,6 +77,21 @@ class EbayAPI:
             seconds=token_data['expires_in']
         )
         return self.token
+    
+    def check_rate_limits(self):
+        """Check API rate limits using /rate_limit endpoint"""
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        response = requests.get(
+            'https://api.ebay.com/developer/analytics/v1_beta/rate_limit',
+            headers=headers
+        )
+        
+        if response.status_code == 403:
+            raise ValueError("Missing required scope")
+        
+        response.raise_for_status()
+        return response.json()
 
     def search(self, keywords, filters=None, limit=200, offset=0, sort_order=None):
         """Search with optional sorting"""

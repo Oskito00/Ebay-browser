@@ -212,19 +212,41 @@ def test_search_new_items(app):
 #***********************
 
 @pytest.mark.live
-def test_simple_rate_limit_check(app):
+def test_rate_limit_check(app):
     with app.app_context():
         api = EbayAPI()
-        try:
-            data = api.get_rate_limit_status()
-            assert 'rateLimits' in data
-            if data['rateLimits']:
-                assert 'resources' in data['rateLimits'][0]
-        except ValueError as e:
-            if "403" in str(e):
-                pytest.fail("Missing required API scope")
-            else:
-                pytest.skip(f"Rate limit check skipped: {str(e)}")
+        
+        # Get rate limits
+        limits = api.check_rate_limits()
+        
+        # Validate response structure
+        assert 'rateLimits' in limits, "Missing rateLimits key"
+        assert len(limits['rateLimits']) > 0, "Empty rate limits array"
+        
+        # Find Browse API limits
+        browse_limits = None
+        for group in limits['rateLimits']:
+            if group.get('apiContext') == 'buy' and group.get('apiName') == 'Browse':
+                for resource in group.get('resources', []):
+                    if resource.get('name') == 'buy.browse':
+                        browse_limits = resource.get('rates', [{}])[0]
+                        break
+                if browse_limits:
+                    break
+        
+        # Print Browse API details
+        print("\nBrowse API Limits:")
+        if browse_limits:
+            print(f"Daily Limit: {browse_limits.get('limit')}")
+            print(f"Remaining Calls: {browse_limits.get('remaining')}")
+            print(f"Reset Time: {browse_limits.get('reset')}")
+        else:
+            print("Browse API limits not found in response")
+        
+        # Basic validation
+        assert browse_limits, "Browse API limits missing"
+        assert 'limit' in browse_limits, "Missing limit field"
+        assert 'remaining' in browse_limits, "Missing remaining field"
 
 
 
