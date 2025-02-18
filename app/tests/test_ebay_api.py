@@ -11,6 +11,7 @@ from app import db
 import requests_mock
 import json
 from app import create_app
+from requests.exceptions import HTTPError
 
 @pytest.fixture
 def ebay_api():
@@ -205,6 +206,25 @@ def test_search_new_items(app):
         api = EbayAPI()
         items = api.search_new_items("book")
         assert len(items) <= 200
+
+#***********************
+#Rate Limit Tests
+#***********************
+
+@pytest.mark.live
+def test_simple_rate_limit_check(app):
+    with app.app_context():
+        api = EbayAPI()
+        try:
+            data = api.get_rate_limit_status()
+            assert 'rateLimits' in data
+            if data['rateLimits']:
+                assert 'resources' in data['rateLimits'][0]
+        except ValueError as e:
+            if "403" in str(e):
+                pytest.fail("Missing required API scope")
+            else:
+                pytest.skip(f"Rate limit check skipped: {str(e)}")
 
 
 

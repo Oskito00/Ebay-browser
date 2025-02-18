@@ -9,6 +9,7 @@ from app.models import Item
 from app import db
 import logging
 import re
+from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,20 @@ class EbayAPI:
         if not self.token:
             return True  # No token exists
         return datetime.now(timezone.utc) > (self.token_expiry - timedelta(seconds=60))
+    
+    def get_rate_limit_status(self):
+        """Get simplified rate limit status"""
+        try:
+            response = self.session.get(
+                'https://api.ebay.com/developer/analytics/v1_beta/user_rate_limit',
+                headers={'Authorization': f'Bearer {self.token}'}
+            )
+            response.raise_for_status()
+            return response.json()
+        except HTTPError as e:
+            if e.response.status_code == 403:
+                raise ValueError("Missing required API scope")
+            return {}
 
     def _get_token(self):
         """Main token acquisition method"""
@@ -291,6 +306,8 @@ class EbayAPI:
             return float(price_data.get(key, 0))
         except (TypeError, ValueError):
             return 0.0
+
+    
 
 __all__ = ['EbayAPI']
 
