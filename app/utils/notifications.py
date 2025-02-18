@@ -46,16 +46,9 @@ class NotificationManager:
         # Format message
         message = "<b>New Items Found!</b>\n\n"
         for item in items[:10]:  # Limit to 10 items per message
-            # Use original price/currency if GBP, else use converted price/currency
-            price_display = (
-                f"{item.original_price} {item.original_currency}"
-                if item.original_currency == 'GBP'
-                else f"{item.price} {item.currency}"
-            )
-            
             message += (
                 f"🏷️ <a href='{item.url}'>{item.title}</a>\n"
-                f"💰 {price_display}\n"
+                f"💰 {item.price} {item.currency}\n"
                 f"📍 {item.location_country or 'N/A'}\n\n"
             )
         

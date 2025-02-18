@@ -181,7 +181,7 @@ def test_real_buying_options(app):
 
 def test_response_price_format(app):
     with app.app_context():
-        api = EbayAPI(marketplace='EBAY_FR')
+        api = EbayAPI(marketplace='EBAY_US')
         items = api.search_new_items("pokemon base set booster box", filters={})
         print(items[0])
         assert len(items) > 0

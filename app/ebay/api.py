@@ -28,14 +28,18 @@ class EbayAPI:
         self.headers = {
             'X-EBAY-C-MARKPLACE-ID': marketplace,
             'X-EBAY-C-CURRENCY': MARKETPLACE_IDS[marketplace]['currency'],
-            'Accept-Language': 'en-GB',  # TODO: This might give errors when I switch to country that doesn't speak english
-            'Content-Language': 'en-GB', #TODO: make dynamic once it works
+            'Accept-Language': MARKETPLACE_IDS[marketplace]['language'],
+            'Content-Language': MARKETPLACE_IDS[marketplace]['language'], 
             'Authorization': f'Bearer {self._get_token()}',
             'Content-Type': 'application/json'
         }
         self.marketplace = marketplace
-        self.country_code = MARKETPLACE_IDS[marketplace]['location']
-        self.currency = MARKETPLACE_IDS[marketplace]['currency']
+        self.marketplace_config = MARKETPLACE_IDS.get(
+            marketplace, 
+            MARKETPLACE_IDS['EBAY_GB']
+        )
+        self.country_code = self.marketplace_config['location']
+        self.currency = self.marketplace_config['currency']
         self._get_token()  # Fetch initial token
         self.session = requests.Session()
     
@@ -78,8 +82,10 @@ class EbayAPI:
         self._get_token()
         headers = {
             'Authorization': f'Bearer {self.token}',
-            'X-EBAY-C-MARKPLACE-ID': self.marketplace,
+            'X-EBAY-C-MARKETPLACE-ID': self.marketplace.replace('_', '-'),
             'X-EBAY-C-CURRENCY': self.currency,
+            'Content-Language': self.marketplace_config['language'],
+            'Accept-Language': self.marketplace_config['language'],
             'Content-Type': 'application/json'
         }
         
@@ -256,7 +262,7 @@ class EbayAPI:
             original_price = price_info.get('convertedFromValue')
             original_currency = price_info.get('convertedFromCurrency')
             
-            # US listings don't have converted prices
+            # US listings don't have original prices
             if original_price is None:
                 original_price = price_info.get('value')
                 original_currency = self.currency  # USD for US marketplace

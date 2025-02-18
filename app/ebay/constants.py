@@ -13,6 +13,7 @@ MARKETPLACE_IDS = {
         'country': 'United Kingdom',
         'site': 'ebay.co.uk',
         'currency': 'GBP',
+        'language': 'en-GB'
     },
     'EBAY_US': {
         'code': 'EBAY_US',
@@ -20,6 +21,7 @@ MARKETPLACE_IDS = {
         'country': 'United States',
         'site': 'ebay.com',
         'currency': 'USD',
+        'language': 'en-US'
     },
     'EBAY_DE': {
         'code': 'EBAY_DE',
@@ -27,6 +29,7 @@ MARKETPLACE_IDS = {
         'country': 'Germany',
         'site': 'ebay.de',
         'currency': 'EUR',
+        'language': 'de-DE'
     },
     'EBAY_CA': {
         'code': 'EBAY_CA',
@@ -34,6 +37,7 @@ MARKETPLACE_IDS = {
         'country': 'Canada',
         'site': 'ebay.ca',
         'currency': 'CAD',
+        'language': 'en-CA'  # English Canada
     },
     'EBAY_AU': {
         'code': 'EBAY_AU',
@@ -41,6 +45,7 @@ MARKETPLACE_IDS = {
         'country': 'Australia',
         'site': 'ebay.com.au',
         'currency': 'AUD',
+        'language': 'en-AU'  # English Australia
     },
     'EBAY_FR': {
         'code': 'EBAY_FR',
@@ -48,6 +53,7 @@ MARKETPLACE_IDS = {
         'country': 'France',
         'site': 'ebay.fr',
         'currency': 'EUR',
+        'language': 'fr-FR'
     },
     'EBAY_IT': {
         'code': 'EBAY_IT',
@@ -55,6 +61,7 @@ MARKETPLACE_IDS = {
         'country': 'Italy',
         'site': 'ebay.it',
         'currency': 'EUR',
+        'language': 'it-IT'
     },
     'EBAY_ES': {
         'code': 'EBAY_ES',
@@ -62,6 +69,7 @@ MARKETPLACE_IDS = {
         'country': 'Spain',
         'site': 'ebay.es',
         'currency': 'EUR',
+        'language': 'es-ES'
     },
     'EBAY_NL': {
         'code': 'EBAY_NL',
@@ -69,13 +77,15 @@ MARKETPLACE_IDS = {
         'country': 'Netherlands',
         'site': 'ebay.nl',
         'currency': 'EUR',
+        'language': 'nl-NL'
     },
     'EBAY_PL': {
         'code': 'EBAY_PL',
         'location': 'PL',
         'country': 'Poland',
         'site': 'ebay.pl',
-        'currency': 'EUR',
+        'currency': 'PLN',
+        'language': 'pl-PL'
     }
 }
 
