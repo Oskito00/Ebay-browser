@@ -143,43 +143,40 @@ class EbayAPI:
         return filtered_items
     
     def search_all_pages(self, keywords, filters=None, marketplace=None, required_keywords=None, excluded_keywords=None):
-        """Search all pages and return parsed items as dictionaries"""
+        """Search first two pages and return parsed items"""
         # Use marketplace if provided
         if marketplace:
             self.marketplace = marketplace
-                
+        
         all_items = []
         total = None
         offset = 0
+        pages_scraped = 0
+        max_pages = 2  # Maximum pages to scrape
         
-        while True:
-            # Add dynamic rate limiting
+        while pages_scraped < max_pages:
             time.sleep(current_app.config.get('EBAY_RATE_LIMIT', 1))  
             
-            # Fetch raw API response
+            # Fetch and parse response
             raw_response = self.search(keywords, filters, limit=200, offset=offset)
-            
-            # Parse items immediately
             parsed_items = self.parse_response(raw_response)
+            
             # First page initialization
             if total is None:
                 total = raw_response.get('total', 0)
                 if total == 0 or not parsed_items:
                     break
             
-            # Store parsed items
+            # Store items and update counters
             all_items.extend(parsed_items)
-            
-            # Update offset using parsed items count
             offset += len(parsed_items)
+            pages_scraped += 1
             
-            # Break conditions
+            # Break early if no more items
             if len(parsed_items) < 200:
                 break
-            if offset >= total:
-                break
         
-        # Filter items based on required and excluded keywords
+        # Apply keyword filters
         filtered_items = self._filter_items(all_items, required_keywords, excluded_keywords)
         
         return filtered_items

@@ -189,6 +189,22 @@ def test_response_price_format(app):
             assert 'price' in item
             assert isinstance(item['price'], float)
 
+#***********************
+#Scraping Ebay Tests
+#***********************
+
+def test_scrape_all_pages(app):
+    with app.app_context():
+        api = EbayAPI()
+        items = api.search_all_pages("book")
+        assert 200 <= len(items) <= 400
+        assert len(set(item['ebay_id'] for item in items)) == len(items)
+
+def test_search_new_items(app):
+    with app.app_context():
+        api = EbayAPI()
+        items = api.search_new_items("book")
+        assert len(items) <= 200
 
 
 
