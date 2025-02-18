@@ -175,5 +175,21 @@ def test_real_buying_options(app):
         any_items = api.search_new_items("pokemon base set booster box", filters={})
         assert len(any_items) >= len(buy_it_now_items) + (len(auction_items) if auction_items else 0)
 
+#***********************
+#Price Filtering Tests
+#***********************
+
+def test_response_price_format(app):
+    with app.app_context():
+        api = EbayAPI(marketplace='EBAY_FR')
+        items = api.search_new_items("pokemon base set booster box", filters={})
+        print(items[0])
+        assert len(items) > 0
+        for item in items:
+            assert 'price' in item
+            assert isinstance(item['price'], float)
+
+
+
 
 
