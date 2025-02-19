@@ -154,7 +154,7 @@ def test_real_buying_options(app):
         
         # Test Buy It Now
         buy_it_now_items = api.search_new_items(
-            "pokemon base set booster box", 
+            "pokemon base set booster box 1st edition", 
             filters={'buying_options': 'FIXED_PRICE'}, 
         )
         assert len(buy_it_now_items) > 0
@@ -164,7 +164,7 @@ def test_real_buying_options(app):
         
         # Test Auction
         auction_items = api.search_new_items(
-            "pokemon base set booster box", 
+            "pokemon base set booster box 1st edition", 
             filters={'buying_options': 'AUCTION'}, 
         )
         if len(auction_items) > 0:  # Auctions may not always be available
@@ -173,7 +173,7 @@ def test_real_buying_options(app):
                 # assert 'current_bid' in item  # If your parser extracts this
         
         # Test Any
-        any_items = api.search_new_items("pokemon base set booster box", filters={})
+        any_items = api.search_new_items("pokemon base set booster box 1st edition", filters={})
         assert len(any_items) >= len(buy_it_now_items) + (len(auction_items) if auction_items else 0)
 
 #***********************
@@ -206,6 +206,25 @@ def test_search_new_items(app):
         api = EbayAPI()
         items = api.search_new_items("book")
         assert len(items) <= 200
+
+def test_search_raw_response(app):
+    with app.app_context():
+        api = EbayAPI("EBAY_GB")
+        raw_response = api.search("iphone", limit=1)  # Get raw response
+        items = api.parse_response(raw_response)  # Processed items
+        
+        print("\n=== Raw Response Type ===")
+        print(raw_response)  # Should be dict
+        
+        print("\n=== Parsed Items Type ===")
+        print(f"Type: {type(items)}")  # Should be list
+        print(f"Length: {len(items)}")
+        
+        if items:
+            print("\n=== First Item ===")
+            print(items[0])
+        else:
+            print("No items found in parsed response")
 
 #***********************
 #Rate Limit Tests

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import time
 from app import db
 from app.models import Query, Item
@@ -19,6 +20,7 @@ def check_query(query_id):
             app.logger.debug(f"START check_query {query_id}")
             query = Query.query.get(query_id)
             app.logger.debug(f"Checking query: {query.keywords}")
+            
             if not query:
                 app.logger.error(f"Query {query_id} not found")
                 return
@@ -43,20 +45,33 @@ def check_query(query_id):
                 for item in items:
                     new_item = Item(
                         ebay_id=item['ebay_id'],
+                        legacy_id =item['legacy_id'],
+                        query_id=query_id,
                         title=item['title'],
                         price=item['price'],
                         currency=item.get('currency', 'USD'),
-                        original_price=item.get('original_price'),
-                        original_currency=item.get('original_currency'),
+                        # original_price=item.get('original_price'),
+                        # original_currency=item.get('original_currency'),
                         url=item['url'],
                         image_url=item.get('image_url'),
                         seller=item.get('seller'),
                         seller_rating=item.get('seller_rating'),
                         condition=item.get('condition'),
+                        last_updated = datetime.now(timezone.utc),
                         location_country=item.get('location', {}).get('country'),
-                        query_id=query_id
+                        postal_code = item.get('location',{}).get('postal_code'),
+                        start_time = item.get('start_time'),
+                        end_time = item.get('end_time'),
+                        buying_options = item.get('buying_options'),
+
+                        #New fields
+                        auction_details = item.get('auction_details'),
+                        categories = item.get('categories'),
+                        marketplace = item.get('marketplace'),
+                        images = item.get('images'),
                     )
                     new_items.append(new_item)
+                print("trying to add items to database")
                 db.session.add_all(new_items)
                 db.session.commit()
                 return
@@ -84,20 +99,32 @@ def check_query(query_id):
                 if item['ebay_id'] not in existing_urls:
                     try:
                         new_item = Item(
-                            ebay_id=item['ebay_id'],
-                            title=item['title'],
-                            price=item['price'],
-                            currency=item.get('currency', 'USD'),
-                            original_price=item.get('original_price'),
-                            original_currency=item.get('original_currency'),
-                            url=item['url'],
-                            image_url=item.get('image_url'),
-                            seller=item.get('seller'),
-                            seller_rating=item.get('seller_rating'),
-                            condition=item.get('condition'),
-                            location_country=item.get('location', {}).get('country'),
-                            query_id=query_id
-                        )
+                        ebay_id=item['ebay_id'],
+                        legacy_id =item['legacy_id'],
+                        query_id=query_id,
+                        title=item['title'],
+                        price=item['price'],
+                        currency=item.get('currency', 'USD'),
+                        # original_price=item.get('original_price'),
+                        # original_currency=item.get('original_currency'),
+                        url=item['url'],
+                        image_url=item.get('image_url'),
+                        seller=item.get('seller'),
+                        seller_rating=item.get('seller_rating'),
+                        condition=item.get('condition'),
+                        last_updated = datetime.now(timezone.utc),
+                        location_country=item.get('location', {}).get('country'),
+                        postal_code = item.get('location',{}).get('postal_code'),
+                        start_time = item.get('start_time'),
+                        end_time = item.get('end_time'),
+                        buying_options = item.get('buying_options'),
+
+                        #New fields
+                        auction_details = item.get('auction_details'),
+                        categories = item.get('categories'),
+                        marketplace = item.get('marketplace'),
+                        images = item.get('images'),
+                    )
                         db.session.add(new_item)
                         new_items.append(new_item)
                     except KeyError as e:
@@ -121,10 +148,6 @@ def check_query(query_id):
                 db.session.commit()
                 app.logger.debug("Items committed to database")
 
-            #TODO: Add dealing with ended items
-            #TODO: Add dealing with aution items as well as buy it now items
-            #TODO: Add notifications for price changes
-            #TODO: Deal tith items dissapearing from the search results
             time.sleep(2)
 
         except ConflictingIdError:

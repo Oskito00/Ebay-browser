@@ -63,23 +63,30 @@ class Item(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     ebay_id = db.Column(db.String(50), nullable=False)
+    legacy_id = db.Column(db.String(50))
     query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
     title = db.Column(db.String(255))
     price = db.Column(db.Float)
+    currency = db.Column(db.String(10), nullable=False, default='GBP')
+    # original_price = db.Column(db.Numeric(10,2))
+    # original_currency = db.Column(db.String(5))
     url = db.Column(db.String(512))
     image_url = db.Column(db.String(255))
-    last_updated = db.Column(db.DateTime) 
-    currency = db.Column(db.String(10), nullable=False, default='GBP')
-    legacy_id = db.Column(db.String(50))
-    original_price = db.Column(db.Numeric(10,2))
-    original_currency = db.Column(db.String(3))
     seller = db.Column(db.String(100))
-    seller_rating = db.Column(db.String(20))  # Changed from Float
+    seller_rating = db.Column(db.String(20))
     condition = db.Column(db.String(50))
+    last_updated = db.Column(db.DateTime)
+    location_country = db.Column(db.String(10)) 
     postal_code = db.Column(db.String(20))
-    categories = db.Column(db.JSON)  # Requires PostgreSQL 9.4+
-    listing_date = db.Column(db.DateTime)
-    location_country = db.Column(db.String(50))
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    buying_options = db.Column(db.Text)
+
+    # New auction fields
+    auction_details = db.Column(db.Text)  # JSON: bid_count, current_bid etc
+    categories = db.Column(db.Text)  # JSON: {'ids': [], 'names': []}
+    marketplace = db.Column(db.String(20))  # e.g. 'EBAY_GB'
+    images = db.Column(db.Text)  # JSON: {'main': url, 'thumbnails': []}
     
     # Add composite unique constraint
     __table_args__ = (

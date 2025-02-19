@@ -1,9 +1,12 @@
+import json
 import os
 from venv import logger
 import requests
 from datetime import datetime, timedelta, timezone
 from flask import current_app
 import time
+
+from app.utils.parsing_helpers import parse_date
 from .constants import CONDITION_IDS, MARKETPLACE_IDS
 from app.models import Item
 from app import db
@@ -177,7 +180,7 @@ class EbayAPI:
             time.sleep(current_app.config.get('EBAY_RATE_LIMIT', 1))  
             
             # Fetch and parse response
-            raw_response = self.search(keywords, filters, limit=200, offset=offset)
+            raw_response = self.search(keywords, filters, limit=200, offset=offset,sort_order='newlyListed')
             parsed_items = self.parse_response(raw_response)
             
             # First page initialization
@@ -198,7 +201,17 @@ class EbayAPI:
         # Apply keyword filters
         filtered_items = self._filter_items(all_items, required_keywords, excluded_keywords)
         
-        return filtered_items
+        # Remove duplicates after filtering
+        seen_ids = set()
+        unique_items = []
+        for item in filtered_items:
+            item_id = item.get('ebay_id')
+            if item_id and item_id not in seen_ids:
+                seen_ids.add(item_id)
+                unique_items.append(item)
+        
+        print(f"Removed {len(filtered_items) - len(unique_items)} duplicates")
+        return unique_items
     
     def _build_filter(self, filters):
         filter_parts = [
@@ -272,25 +285,50 @@ class EbayAPI:
     def parse_response(self, response):
         items = []
         for item_data in response.get('itemSummaries', []):
-            price_info = item_data.get('price', {})
+            price_info = item_data.get('price', {})            
+            # Base price handling
+            base_price = {
+                'value': float(price_info.get('value', 0)),
+                'currency': price_info.get('currency', self.currency),
+                # 'convertedFromValue': price_info.get('convertedFromValue',0),
+                # 'convertedFromCurrency': price_info.get('convertedFromCurrency', None)
+            }
+
+            raw_buying_options = item_data.get('buyingOptions', [])
+            is_auction = 'AUCTION' in raw_buying_options
+
+            auction_data = {
+            'bid_count': item_data.get('bidCount', 0),
+            'current_bid': {
+                'value': float(item_data.get('currentBidPrice', {}).get('value', 0)),
+                'currency': item_data.get('currentBidPrice', {}).get('currency', self.currency)
+            },
+            'end_time': item_data.get('itemEndDate'),
+            'marketplace_id': item_data.get('listingMarketplaceId')
+            } if is_auction else None
+
+            # Serialize complex fields
+            serialized_categories = json.dumps({
+                'ids': [cat['categoryId'] for cat in item_data.get('categories', [])],
+                'names': [cat['categoryName'] for cat in item_data.get('categories', [])]
+            })
             
-            # Handle original price for non-US listings
-            original_price = price_info.get('convertedFromValue')
-            original_currency = price_info.get('convertedFromCurrency')
-            
-            # US listings don't have original prices
-            if original_price is None:
-                original_price = price_info.get('value')
-                original_currency = self.currency  # USD for US marketplace
-            
+            serialized_images = json.dumps({
+                'main': item_data.get('image', {}).get('imageUrl'),
+                'thumbnails': [img.get('imageUrl') for img in item_data.get('thumbnailImages', [])]
+            })
+
+            # Serialize auction details if they exist
+            serialized_auction = json.dumps(auction_data) if auction_data else None
+
             items.append({
                 'ebay_id': item_data.get('itemId'),
                 'legacy_id': item_data.get('legacyItemId'),
                 'title': item_data.get('title', 'No Title'),
-                'price': float(price_info.get('value', 0)),
-                'currency': price_info.get('currency', self.currency),
-                'original_price': float(original_price) if original_price else None,
-                'original_currency': original_currency,
+                'price': base_price['value'],
+                'currency': base_price['currency'],
+                # 'original_price': base_price['convertedFromValue'],
+                # 'original_currency': base_price['convertedFromCurrency'],
                 'url': item_data.get('itemWebUrl'),
                 'image_url': item_data.get('image', {}).get('imageUrl'),
                 'seller': item_data.get('seller', {}).get('username'),
@@ -298,10 +336,17 @@ class EbayAPI:
                 'condition': item_data.get('condition'),
                 'location': {
                     'country': item_data.get('itemLocation', {}).get('country'),
-                    'postal_code': item_data.get('itemLocation', {}).get('postalCode')
-                },
-                'categories': [cat['categoryName'] for cat in item_data.get('categories', [])],
-                'listing_date': item_data.get('itemCreationDate'),
+                    'postal_code': item_data.get('itemLocation', {}).get('postalCode')},
+                'start_time': item_data.get(parse_date('itemCreationDate')),
+                'end_time': parse_date(item_data.get('itemEndDate')),
+                'buying_options': json.dumps(raw_buying_options),
+
+                # New fields
+                'auction_details': serialized_auction,
+                'categories': serialized_categories,
+                'marketplace': item_data.get('listingMarketplaceId'),
+                'images': serialized_images,
+                
             })
         return items
 
