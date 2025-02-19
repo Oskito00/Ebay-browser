@@ -81,21 +81,6 @@ class EbayAPI:
         )
         return self.token
     
-    def check_rate_limits(self):
-        """Check API rate limits using /rate_limit endpoint"""
-        headers = {'Authorization': f'Bearer {self.token}'}
-        
-        response = requests.get(
-            'https://api.ebay.com/developer/analytics/v1_beta/rate_limit',
-            headers=headers
-        )
-        
-        if response.status_code == 403:
-            raise ValueError("Missing required scope")
-        
-        response.raise_for_status()
-        return response.json()
-
     def search(self, keywords, filters=None, limit=200, offset=0, sort_order=None):
         """Search with optional sorting"""
         # Initialize filters as empty dict if None
@@ -290,8 +275,6 @@ class EbayAPI:
             base_price = {
                 'value': float(price_info.get('value', 0)),
                 'currency': price_info.get('currency', self.currency),
-                # 'convertedFromValue': price_info.get('convertedFromValue',0),
-                # 'convertedFromCurrency': price_info.get('convertedFromCurrency', None)
             }
 
             raw_buying_options = item_data.get('buyingOptions', [])
@@ -327,8 +310,6 @@ class EbayAPI:
                 'title': item_data.get('title', 'No Title'),
                 'price': base_price['value'],
                 'currency': base_price['currency'],
-                # 'original_price': base_price['convertedFromValue'],
-                # 'original_currency': base_price['convertedFromCurrency'],
                 'url': item_data.get('itemWebUrl'),
                 'image_url': item_data.get('image', {}).get('imageUrl'),
                 'seller': item_data.get('seller', {}).get('username'),
@@ -349,12 +330,21 @@ class EbayAPI:
                 
             })
         return items
-
-    def _parse_price(self, price_data, key='value'):
-        try:
-            return float(price_data.get(key, 0))
-        except (TypeError, ValueError):
-            return 0.0
+        
+    def check_rate_limits(self):
+        """Check API rate limits using /rate_limit endpoint"""
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        response = requests.get(
+            'https://api.ebay.com/developer/analytics/v1_beta/rate_limit',
+            headers=headers
+        )
+        
+        if response.status_code == 403:
+            raise ValueError("Missing required scope")
+        
+        response.raise_for_status()
+        return response.json()
 
     
 

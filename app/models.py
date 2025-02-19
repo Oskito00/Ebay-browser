@@ -68,8 +68,6 @@ class Item(db.Model):
     title = db.Column(db.String(255))
     price = db.Column(db.Float)
     currency = db.Column(db.String(10), nullable=False, default='GBP')
-    # original_price = db.Column(db.Numeric(10,2))
-    # original_currency = db.Column(db.String(5))
     url = db.Column(db.String(512))
     image_url = db.Column(db.String(255))
     seller = db.Column(db.String(100))
