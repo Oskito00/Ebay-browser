@@ -81,12 +81,14 @@ class EbayAPI:
         )
         return self.token
     
-    def search(self, keywords, filters=None, limit=200, offset=0, sort_order=None):
+    def raw_search(self, keywords, filters=None, limit=200, offset=0, sort_order=None):
         """Search with optional sorting"""
         # Initialize filters as empty dict if None
         filters = filters or {}
-        
+
+        # Gets a token if already present, if not generates a new one
         self._get_token()
+
         headers = {
             'Authorization': f'Bearer {self.token}',
             'X-EBAY-C-MARKETPLACE-ID': self.marketplace.replace('_', '-'),
@@ -121,83 +123,61 @@ class EbayAPI:
         if response.status_code == 429:
             sleep_time = int(response.headers.get('Retry-After', 60))
             time.sleep(sleep_time)
-            return self.search(keywords, filters, limit, offset)
+            return self.raw_search(keywords, filters, limit, offset)
         response.raise_for_status()
         return response.json()
     
-    def search_new_items(self, keywords, filters=None, marketplace=None, required_keywords=None, excluded_keywords=None):
+    def custom_search_query(self, keywords, filters=None, sort_order=None, max_pages=None, marketplace=None, search_for_sold=False, required_keywords=None, excluded_keywords=None):
         """
-        Search first page of newly listed items
-        :return: First 200 results (max eBay limit)
-        :note: Pagination disabled for this method
+        The user can decide what they want to search for in this function
+        Examples include: All items, only the first 200 items, the sold items (no longer active)
         """
         if marketplace:
             self.marketplace = marketplace
 
-        response = self.search(
-            keywords=keywords,
-            filters=filters,
-            limit=200,
-            offset=0,
-            sort_order='newlyListed'
-        )
-
-        items = self.parse_response(response)
-
-        # Filter items based on required and excluded keywords
-        filtered_items = self._filter_items(items, required_keywords, excluded_keywords)
-
-        return filtered_items
-    
-    def search_all_pages(self, keywords, filters=None, marketplace=None, required_keywords=None, excluded_keywords=None):
-        """Search first two pages and return parsed items"""
-        # Use marketplace if provided
-        if marketplace:
-            self.marketplace = marketplace
-        
-        all_items = []
-        total = None
+        returned_items = []
+        pages_searched = 0
         offset = 0
-        pages_scraped = 0
-        max_pages = 2  # Maximum pages to scrape
-        
-        while pages_scraped < max_pages:
-            time.sleep(current_app.config.get('EBAY_RATE_LIMIT', 1))  
+
+        while (max_pages is None) or (pages_searched < max_pages):
+            time.sleep(1)  # Add rate limiting
             
-            # Fetch and parse response
-            raw_response = self.search(keywords, filters, limit=200, offset=offset,sort_order='newlyListed')
+            raw_response = self.raw_search(
+                keywords=keywords,
+                filters=filters,
+                limit=200,
+                offset=offset,
+                sort_order=sort_order
+            )
             parsed_items = self.parse_response(raw_response)
             
-            # First page initialization
-            if total is None:
-                total = raw_response.get('total', 0)
-                if total == 0 or not parsed_items:
-                    break
+            # Filter before appending
+            filtered_batch = self._filter_items(parsed_items, required_keywords, excluded_keywords)
+            returned_items.extend(filtered_batch)
             
-            # Store items and update counters
-            all_items.extend(parsed_items)
             offset += len(parsed_items)
-            pages_scraped += 1
-            
-            # Break early if no more items
+            pages_searched += 1
+
+            # Break if last page
             if len(parsed_items) < 200:
                 break
         
-        # Apply keyword filters
-        filtered_items = self._filter_items(all_items, required_keywords, excluded_keywords)
-        
-        # Remove duplicates after filtering
+        # Remove duplicates while preserving order and handling null IDs
         seen_ids = set()
         unique_items = []
-        for item in filtered_items:
+        for item in returned_items:
             item_id = item.get('ebay_id')
-            if item_id and item_id not in seen_ids:
-                seen_ids.add(item_id)
-                unique_items.append(item)
+            if item_id:  # Only process items with an ID
+                if item_id not in seen_ids:
+                    seen_ids.add(item_id)
+                    unique_items.append(item)
+            else:
+                # Optional: Keep items without IDs or skip them
+                unique_items.append(item)  # Remove this line to exclude items without IDs
         
-        print(f"Removed {len(filtered_items) - len(unique_items)} duplicates")
+        print(f"Removed {len(returned_items) - len(unique_items)} duplicates")
         return unique_items
-    
+        
     def _build_filter(self, filters):
         filter_parts = [
             f"itemLocationCountry:{filters.get('item_location', self.country_code)}",

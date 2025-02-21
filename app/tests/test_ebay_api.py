@@ -153,7 +153,7 @@ def test_real_buying_options(app):
         api = EbayAPI(marketplace='EBAY_GB')
         
         # Test Buy It Now
-        buy_it_now_items = api.search_new_items(
+        buy_it_now_items = api.custom_search_query(
             "pokemon base set booster box 1st edition", 
             filters={'buying_options': 'FIXED_PRICE'}, 
         )
@@ -163,7 +163,7 @@ def test_real_buying_options(app):
             assert isinstance(item['price'], float)
         
         # Test Auction
-        auction_items = api.search_new_items(
+        auction_items = api.custom_search_query(
             "pokemon base set booster box 1st edition", 
             filters={'buying_options': 'AUCTION'}, 
         )
@@ -173,7 +173,7 @@ def test_real_buying_options(app):
                 # assert 'current_bid' in item  # If your parser extracts this
         
         # Test Any
-        any_items = api.search_new_items("pokemon base set booster box 1st edition", filters={})
+        any_items = api.custom_search_query("pokemon base set booster box 1st edition", filters={})
         assert len(any_items) >= len(buy_it_now_items) + (len(auction_items) if auction_items else 0)
 
 #***********************
@@ -183,7 +183,7 @@ def test_real_buying_options(app):
 def test_response_price_format(app):
     with app.app_context():
         api = EbayAPI(marketplace='EBAY_US')
-        items = api.search_new_items("pokemon base set booster box", filters={})
+        items = api.custom_search_query("pokemon base set booster box", filters={})
         print(items[0])
         assert len(items) > 0
         for item in items:
@@ -204,13 +204,13 @@ def test_scrape_all_pages(app):
 def test_search_new_items(app):
     with app.app_context():
         api = EbayAPI()
-        items = api.search_new_items("book")
+        items = api.custom_search_query("book")
         assert len(items) <= 200
 
 def test_search_raw_response(app):
     with app.app_context():
         api = EbayAPI("EBAY_GB")
-        raw_response = api.search("iphone", limit=1)  # Get raw response
+        raw_response = api.raw_search("iphone", limit=1)  # Get raw response
         items = api.parse_response(raw_response)  # Processed items
         
         print("\n=== Raw Response Type ===")
@@ -225,6 +225,23 @@ def test_search_raw_response(app):
             print(items[0])
         else:
             print("No items found in parsed response")
+
+@pytest.mark.live
+def test_custom_search_query(app):
+    with app.app_context():
+        api = EbayAPI("EBAY_GB")
+        items = api.custom_search_query("iphone",filters={'min_price':90,'max_price':500},sort_order='newlyListed',max_pages=2,marketplace="EBAY_GB")
+
+        assert len(items) >= 200
+
+        # Quantity check
+        assert len(items) >= 200, "Expected at least 200 items across 2 pages"
+        
+        # Price validation
+        for item in items:
+            price = item.get('price')
+            assert price is not None, "Item missing price"
+            assert 90 <= price <= 500, f"Price {price} out of range (100-500)"
 
 #***********************
 #Rate Limit Tests

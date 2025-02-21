@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
 from app.jobs.query_jobs import check_query
-from app.models import Query, db
+from app.models import LongTermItem, Query, db
 from app.forms import QueryForm, DeleteForm  # Create this form if needed
 from decimal import Decimal
 from sqlalchemy import inspect
@@ -11,6 +11,8 @@ from flask import current_app
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.jobstores.base import JobLookupError
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timezone
 
 from app.utils.notifications import NotificationManager
 
@@ -56,11 +58,7 @@ def delete_query(query_id):
                 f"User {current_user.id} tried to delete query {query_id} owned by {query.user.id}"
             )
             abort(403)
-        
-        # # Remove scheduler job
-        # from app.cli.scheduler import remove_single_job
-        # remove_single_job(query_id)
-        
+
         # Database cleanup
         db.session.delete(query)
         db.session.commit()
@@ -124,11 +122,7 @@ def create_query():
                 print("Test query from DB:", test_query)
             except OperationalError as e:
                 print("DB Read Error:", str(e))
-            
-            # # Add to scheduler
-            # from app.cli.scheduler import add_single_job
-            # add_single_job(query.id)
-            
+                        
             return redirect(url_for('queries.manage_queries'))
         except Exception as e:
             db.session.rollback()
@@ -137,3 +131,71 @@ def create_query():
     else:
         print("Form not validated. Errors:", form.errors)
     return render_template('queries/create.html', form=form) 
+
+
+#*******************************
+#HELPER FUNCTIONS
+#*******************************
+
+def archive_items(query):
+    """Archive items to long-term storage, updating existing entries"""
+    for item in query.items:
+        existing = LongTermItem.query.filter_by(
+            ebay_id=item.ebay_id,
+            keywords=query.keywords
+        ).first()
+        
+        if existing:
+            # Update existing record
+            existing.title = item.title
+            existing.price = float(item.price)
+            existing.currency = item.currency
+            existing.url = item.url
+            existing.image_url = item.image_url
+            existing.seller = item.seller
+            existing.seller_rating = item.seller_rating
+            existing.condition = item.condition
+            existing.last_updated = item.last_updated
+            existing.location_country = item.location_country
+            existing.postal_code = item.postal_code
+            existing.start_time = item.start_time
+            existing.end_time = item.end_time
+            existing.buying_options = item.buying_options
+            existing.auction_details = item.auction_details
+            existing.categories = item.categories
+            existing.marketplace = item.marketplace
+            existing.images = item.images
+            existing.recorded_at = datetime.now(timezone.utc)
+        else:
+            # Create new archived item
+            archived = LongTermItem(
+                keywords=query.keywords,
+                ebay_id=item.ebay_id,
+                title=item.title,
+                price=float(item.price),
+                currency=item.currency,
+                url=item.url,
+                image_url=item.image_url,
+                seller=item.seller,
+                seller_rating=item.seller_rating,
+                condition=item.condition,
+                last_updated=item.last_updated,
+                location_country=item.location_country,
+                postal_code=item.postal_code,
+                start_time=item.start_time,
+                end_time=item.end_time,
+                buying_options=item.buying_options,
+                auction_details=item.auction_details,
+                categories=item.categories,
+                marketplace=item.marketplace,
+                images=item.images,
+                recorded_at=datetime.now(timezone.utc)
+            )
+            db.session.add(archived)
+    
+    try:
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Archive failed: {str(e)}")
+        raise

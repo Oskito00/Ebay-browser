@@ -62,9 +62,10 @@ class Item(db.Model):
     __tablename__ = 'items'
     
     id = db.Column(db.Integer, primary_key=True)
+    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
+    keywords = db.Column(db.String(255))
     ebay_id = db.Column(db.String(50), nullable=False)
     legacy_id = db.Column(db.String(50))
-    query_id = db.Column(db.Integer, db.ForeignKey('queries.id'), nullable=False)
     title = db.Column(db.String(255))
     price = db.Column(db.Float)
     currency = db.Column(db.String(10), nullable=False, default='GBP')
@@ -89,4 +90,35 @@ class Item(db.Model):
     # Add composite unique constraint
     __table_args__ = (
         db.UniqueConstraint('ebay_id', 'query_id', name='uq_ebay_id_query'),
+    )
+
+class LongTermItem(db.Model):
+    __tablename__ = 'long_term_items'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    keywords = db.Column(db.String(255), index=True)
+    ebay_id = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(255))
+    price = db.Column(db.Float)
+    currency = db.Column(db.String(10))
+    url = db.Column(db.String(512))
+    image_url = db.Column(db.String(255))
+    seller = db.Column(db.String(100))
+    seller_rating = db.Column(db.String(20))
+    condition = db.Column(db.String(50))
+    last_updated = db.Column(db.DateTime)
+    location_country = db.Column(db.String(10)) 
+    postal_code = db.Column(db.String(20))
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    buying_options = db.Column(db.Text)
+    auction_details = db.Column(db.Text)  # JSON: bid_count, current_bid etc
+    categories = db.Column(db.Text)  # JSON: {'ids': [], 'names': []}
+    marketplace = db.Column(db.String(20))  # e.g. 'EBAY_GB'
+    images = db.Column(db.Text)  # JSON: {'main': url, 'thumbnails': []}
+    recorded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Unique constraint to prevent duplicates
+    __table_args__ = (
+        db.UniqueConstraint('ebay_id', 'recorded_at', name='uq_ebay_id_recorded'),
     )
