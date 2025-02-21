@@ -1,18 +1,12 @@
 import json
-import os
-from venv import logger
 import requests
 from datetime import datetime, timedelta, timezone
 from flask import current_app
 import time
-
 from app.utils.parsing_helpers import parse_date
-from .constants import CONDITION_IDS, MARKETPLACE_IDS
-from app.models import Item
-from app import db
+from app.utils.text_helpers import filter_items
+from .constants import MARKETPLACE_IDS
 import logging
-import re
-from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +146,7 @@ class EbayAPI:
             parsed_items = self.parse_response(raw_response)
             
             # Filter before appending
-            filtered_batch = self._filter_items(parsed_items, required_keywords, excluded_keywords)
+            filtered_batch = filter_items(parsed_items, required_keywords, excluded_keywords)
             returned_items.extend(filtered_batch)
             
             offset += len(parsed_items)
@@ -211,42 +205,6 @@ class EbayAPI:
 
         return ','.join(filter_parts)
     
-    def _filter_items(self, items, required_keywords, excluded_keywords):
-        # Convert None to empty string
-        required = required_keywords or ''
-        excluded = excluded_keywords or ''
-        
-        # Normalize inputs
-        req_kws = {kw.strip().lower() for kw in required.split(',') if kw.strip()}
-        excl_kws = {ekw.strip().lower() for ekw in excluded.split(',') if ekw.strip()}
-        
-        # Preprocess titles
-        processed = []
-        for item in items:
-            title = item['title'].lower()
-            words = set(title.split())
-            processed.append((item, title, words))
-        
-        # Filter logic
-        filtered = []
-        for item, title, words in processed:
-            # Required: all keywords present as whole words
-            req_ok = all(
-                re.search(rf'\b{re.escape(kw)}\b', title) 
-                for kw in req_kws
-            ) if req_kws else True
-            
-            # Excluded: none present as substrings
-            excl_ok = not any(
-                ekw in title
-                for ekw in excl_kws
-            ) if excl_kws else True
-            
-            if req_ok and excl_ok:
-                filtered.append(item)
-        
-        return filtered
-
     def parse_response(self, response):
         items = []
         for item_data in response.get('itemSummaries', []):

@@ -1,58 +1,36 @@
 import pytest
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-from app import create_app, db as _db
-from config import TestingConfig
-from sqlalchemy.orm import sessionmaker, scoped_session
+from app import create_app, db
+from app.models import User
 
-# Load .env from project root
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
-
-@pytest.fixture(scope='session')
+# Fixture: Create a Flask app for testing
+@pytest.fixture(scope='module')
 def app():
-    app = create_app(TestingConfig)
-    app_context = app.app_context()
-    app_context.push()
-    yield app
-    app_context.pop()
-
-@pytest.fixture(scope='session')
-def db(app):
-    _db.create_all()
-    yield _db
-    _db.drop_all()
-
-@pytest.fixture(scope='function')
-def session(db):
-    connection = db.engine.connect()
-    transaction = connection.begin()
+    # 1. Create app with test config
+    app = create_app(config_class='config.TestingConfig')
     
-    # Create session using the connection
-    session_factory = sessionmaker(bind=connection)
-    session = scoped_session(session_factory)
-    
-    # Patch the database session
-    db.session = session
-    
-    yield session
-    
-    transaction.rollback()
-    connection.close()
-    session.remove()
+    # 2. Create fresh database tables
+    with app.app_context():
+        db.create_all()
+        yield app  # Testing happens here
+        db.drop_all()  # Cleanup after all tests
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--run-live", 
-        action="store_true",
-        default=False,
-        help="run tests that make live API calls"
-    )
+# Fixture: HTTP test client
+@pytest.fixture
+def client(app):
+    return app.test_client()
 
-def pytest_collection_modifyitems(config, items):
-    if not config.getoption("--run-live"):
-        skip_live = pytest.mark.skip(reason="need --run-live option to run")
-        for item in items:
-            if "live" in item.keywords:
-                item.add_marker(skip_live)
+# Fixture: Database session
+@pytest.fixture
+def db_session(app):
+    with app.app_context():
+        yield db.session
+        db.session.rollback()  # Undo uncommitted changes
+
+# Fixture: Prepopulated test user
+@pytest.fixture
+def test_user(app):
+    with app.app_context():
+        user = User(email='test@example.com')
+        db.session.add(user)
+        db.session.commit()
+        return user

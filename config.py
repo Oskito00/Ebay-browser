@@ -57,7 +57,7 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    TELEGRAM_BOT_TOKEN = 'TEST_BOT_TOKEN'
+    TELEGRAM_BOT_TOKEN = '7914809074'
 
 config = {
     'development': Config,

@@ -26,7 +26,7 @@ def check_query(query_id):
                 return
             
             # First run logic
-            if not query.items:
+            if query.search_items.count() == 0:
                 items = scrape_ebay(
                     keywords=query.keywords,
                     filters={
@@ -76,7 +76,7 @@ def check_query(query_id):
                 return
 
             # Subsequent runs
-            existing_urls = {item.ebay_id for item in query.items}
+            existing_urls = {item.ebay_id for item in query.search_items}
             new_items = []
             
             items = scrape_new_items(
