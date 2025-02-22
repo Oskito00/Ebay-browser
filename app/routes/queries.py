@@ -44,6 +44,7 @@ def edit_query(query_id):
 @bp.route('/queries/<int:query_id>/delete', methods=['POST'])
 @login_required
 def delete_query(query_id):
+    print("Delete query called")
     form = DeleteForm()
     print("Delete form:", form)
     if not form.validate_on_submit():
@@ -60,11 +61,16 @@ def delete_query(query_id):
 
         # --- Archive items before deletion ---
         archived_count = 0
-        if query.search_items:
+        items_to_archive = query.search_items.all()
+        print("Items to archive:", items_to_archive)
+        if len(items_to_archive) > 0:
             try:
+                print("Data type of query.search_items:", type(items_to_archive))
+                print("Length of query.search_items:", len(items_to_archive))
                 print("Archiving items...")
+                print("query.search_items:", items_to_archive)
                 archive_items(query)
-                archived_count = len(query.search_items)
+                archived_count = len(items_to_archive)
                 flash(f"Archived {archived_count} items", 'info')
                 print(f"Archived {archived_count} items")
             except Exception as e:
@@ -160,7 +166,8 @@ def create_query():
 
 def archive_items(query):
     """Archive items to long-term storage"""
-    for item in query.search_items:  # Changed from .items
+    for item in query.search_items.all():  # Changed from .items
+        print("Archiving item:", item)
         existing = LongTermItem.query.filter_by(
             ebay_id=item.ebay_id,
             keywords=query.keywords

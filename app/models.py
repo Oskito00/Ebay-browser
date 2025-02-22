@@ -121,7 +121,12 @@ class LongTermItem(ItemBase):
 #**********************
 
 def copy_item(source, target):
-    """Copy fields between ItemBase subclasses"""
+    """Copy fields between ItemBase subclasses, excluding id"""
+    excluded_attrs = {'id', '_sa_instance_state'}
     for attr in vars(source).keys():
-        if not attr.startswith('_') and hasattr(target, attr):
+        if (
+            not attr.startswith('_') 
+            and attr not in excluded_attrs
+            and hasattr(target, attr)
+        ):
             setattr(target, attr, getattr(source, attr))
