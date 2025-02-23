@@ -200,26 +200,33 @@ def load_historical_items(query):
         {col.name: getattr(item, col.name) for col in LongTermItem.__table__.columns}
         for item in historical
     ]
+
+    print("Historical dicts:", hist_dicts)
     
     filtered_dicts = filter_items(
         hist_dicts,
         query.required_keywords,
         query.excluded_keywords
     )
+
+    print("Filtered dicts:", filtered_dicts)
     
     # Map back to original objects
     filtered_objs = [
         item for item in historical
         if any(d['ebay_id'] == item.ebay_id for d in filtered_dicts)
     ]
+
+    print("Filtered objs:", filtered_objs)
     
     # Apply additional filters
     final_filtered = [
         item for item in filtered_objs
         if (item.marketplace == query.marketplace) and
-           (item.location_country == query.item_location) and
-           (item.condition == query.condition)
-    ]
+           (item.location_country == query.item_location)   
+            ]
+
+    print("Final filtered:", final_filtered)
     
     # Check for existing items
     new_items = []
@@ -237,6 +244,7 @@ def load_historical_items(query):
             new_items.append(new_item)
     
     if new_items:
+        print("New items to add:", new_items)
         db.session.add_all(new_items)
         db.session.commit()
     
