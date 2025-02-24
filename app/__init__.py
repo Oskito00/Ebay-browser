@@ -1,35 +1,36 @@
 from dotenv import load_dotenv
 from flask import Flask
 from app.extensions import db, migrate, login_manager, csrf, encryptor
-from app.models import Query
-from config import config  # Import the config dictionary
 from flask_wtf.csrf import CSRFProtect
 import logging
 from logging.handlers import RotatingFileHandler
 from .forms import csrf
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from sqlalchemy import create_engine, inspect
 import os
-from app.cli import register_commands
 
 csrf = CSRFProtect()
 
 scheduler = None
 
-def create_app(config_class='config.Config'):
+def create_app(config_class=None):
     load_dotenv(override=True)
     app = Flask(__name__)
-    app.config.from_object(config_class)
     
-    # Configure root logger
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # Determine configuration
+    if config_class:
+        app.config.from_object(config_class)
+    else:
+        env_config = os.getenv('FLASK_ENV', 'development').capitalize() + 'Config'
+        app.config.from_object(f'config.{env_config}')
     
-    # Set apscheduler logger level
-    logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+    # Configure logging only outside tests
+    if not app.config.get('TESTING'):
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        logging.getLogger('apscheduler').setLevel(logging.INFO)
     
     # Initialize CSRF after app creation
     csrf.init_app(app)  # Now 'app' exists
@@ -40,9 +41,10 @@ def create_app(config_class='config.Config'):
     # Create jobstore within app context
     with app.app_context():
         app.scheduler_jobstore = SQLAlchemyJobStore(engine=db.get_engine())
+
+    from app.scheduler.cli import start_scheduler
+    app.cli.add_command(start_scheduler)
     
-    # Register CLI commands
-    register_commands(app)
 
     migrate.init_app(app, db)
     login_manager.init_app(app)

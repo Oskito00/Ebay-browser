@@ -1,180 +1,162 @@
-from unittest.mock import patch  # Correct import
-from app.ebay.api import EbayAPI
-from app.jobs.query_jobs import check_query
-from app.models import Item, Query, User
 import pytest
-from flask import current_app
+from datetime import datetime, timedelta
+from app import create_app, db
+from app.models import User, Query, Item
+from app.jobs.job_management import process_items, full_scrape_job, recent_scrape_job
+from unittest.mock import patch
 
-@pytest.fixture(autouse=True)
-def setup_env(monkeypatch):
-    # Set required environment variables
-    monkeypatch.setenv('EBAY_CLIENT_ID', 'test-client-id')
-    monkeypatch.setenv('EBAY_CLIENT_SECRET', 'test-secret')
-    monkeypatch.setenv('ENCRYPTION_KEY', 'test-encryption-key')
+@pytest.fixture
+def app():
+    app = create_app(config_class='config.TestingConfig')
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
 
-@pytest.fixture(autouse=True)
-def setup_config(monkeypatch):
-    # Set config values directly
-    current_app.config.update(
-        EBAY_CLIENT_ID='test-client-id',
-        EBAY_CLIENT_SECRET='test-secret'
-    )
-
-@pytest.fixture(autouse=True)
-def mock_entire_api():
-    with patch('app.ebay.api.requests.post') as mock_post:
-        mock_post.return_value.json.return_value = {
-            'access_token': 'fake-token',
-            'expires_in': 3600
+@pytest.fixture
+def test_user(app):
+    user = User(
+        email='test@example.com',
+        telegram_chat_id='123',
+        notification_preferences={
+            'price_drops': True,
+            'auction_alerts': True
         }
-        yield
-
-@pytest.fixture(autouse=True)
-def mock_ebay_client():
-    with patch('app.utils.scraper.create_ebay_client') as mock_client:
-        mock_api = mock_client.return_value
-        mock_api.search_all_pages.return_value = [{
-            'ebay_id': '123',
-            'title': 'Test Item',
-            'price': 29.99,
-            'currency': 'USD',
-            'url': 'http://test.item'
-        }]
-        yield
-
-def test_check_query_initial_run(session):  # Use session fixture
-    # Setup
-    user = User(email='test@example.com', password_hash='dummy')
-    session.add(user)
-    session.commit()
-    
-    query = Query(
-        keywords="test search",
-        check_interval=5,
-        user_id=user.id
     )
-    session.add(query)
-    session.commit()
+    db.session.add(user)
+    db.session.commit()
+    return user
 
-    print(f"Query {query.id}: {query}")
-    print("Query is: ", query.keywords)
-    print("Filters are: ", query.filters)
-    
-    with patch('app.utils.scraper.create_ebay_client') as mock_client:
-        # Mock API client creation
-        mock_api = mock_client.return_value
-        mock_api.search_all_pages.return_value = [{
-            'ebay_id': '123',
-            'title': 'Test Item',
-            'price': 29.99,
-            'currency': 'USD',
-            'url': 'http://test.item'
-        }]
-        
-        check_query(query.id)
-        session.commit()
-    
-    assert session.query(Item).count() == 1
-
-def test_ebay_api_requires_credentials(monkeypatch):
-    # Clear environment and config
-    monkeypatch.delenv('EBAY_CLIENT_ID', raising=False)
-    monkeypatch.delenv('EBAY_CLIENT_SECRET', raising=False)
-    
-    from flask import current_app
-    current_app.config['EBAY_CLIENT_ID'] = None
-    current_app.config['EBAY_CLIENT_SECRET'] = None
-    
-    with pytest.raises(ValueError):
-        from app.ebay.api import EbayAPI
-        EbayAPI()
-
-def test_check_query_paginated_results(session):
-    # Setup
-    user = User(email='test@example.com', password_hash='dummy')
-    session.add(user)
-    session.commit()
-    
+@pytest.fixture
+def test_query(test_user):
     query = Query(
-        keywords="test pagination",
-        check_interval=5,
-        user_id=user.id
+        keywords="test query",
+        min_price=10.0,
+        max_price=100.0,
+        check_interval=30,
+        user=test_user
     )
-    session.add(query)
-    session.commit()
+    db.session.add(query)
+    db.session.commit()
+    return query
 
-    # Mock scrape_ebay instead of EbayAPI
-    with patch('app.jobs.query_jobs.scrape_ebay') as mock_scrape:
-        mock_scrape.return_value = [
-            {
-                'ebay_id': '1',
-                'title': 'Item 1',
-                'price': 10.0,
-                'currency': 'USD',
-                'url': 'http://item1'
-            },
-            {
-                'ebay_id': '2',
-                'title': 'Item 2',
-                'price': 20.0,
-                'currency': 'USD',
-                'url': 'http://item2'
-            },
-            {
-                'ebay_id': '3',
-                'title': 'Item 3',
-                'price': 30.0,
-                'currency': 'USD',
-                'url': 'http://item3'
-            }
-        ]
-        
-        check_query(query.id)
-        session.commit()
+def test_process_items_new_item(app, test_query):
+    test_data = [{
+        'ebay_id': '123',
+        'title': 'Test Item',
+        'price': 50.0,
+        'currency': 'GBP',
+        'query_id': test_query.id,
+        'url': 'http://test.com',
+        'last_updated': datetime.utcnow()
+    }]
     
-    # Verify
-    assert session.query(Item).count() == 3
-    items = session.query(Item).order_by(Item.price).all()
-    assert [item.price for item in items] == [10.0, 20.0, 30.0]
+    with app.app_context():
+        new, updated = process_items(test_data, test_query)
+        assert len(new) == 1
+        assert len(updated) == 0
+        item = Item.query.first()
+        assert item.title == 'Test Item'
 
-
-def test_search_with_marketplace(mock_entire_api):
-    with patch('app.ebay.api.EbayAPI.search') as mock_search:
-        mock_search.return_value = {'total': 1, 'items': [{'id': '123'}]}
-        
-        api = EbayAPI()
-        api.search_all_pages(
-            "test",
-            marketplace='EBAY_DE'
-        )
-        
-        assert api.marketplace == 'EBAY_DE'
-
-def test_scraper_called_correctly(session):
-    # Create user first
-    user = User(email='test@example.com', password_hash='dummy')
-    session.add(user)
-    session.commit()
+def test_process_items_update_price(app, test_query):
     
-    # Create query with user association
+    # Create existing item with higher price
+    existing = Item(
+        ebay_id='123',
+        price=60.0,
+        query_id=test_query.id,
+        title='Existing Item',
+        currency='GBP',
+        url='http://example.com/existing',
+    )
+    db.session.add(existing)
+    db.session.commit()
+    
+    test_data = [{
+        'ebay_id': '123', 
+        'price': 55.0,
+        'query_id': test_query.id,
+        'title': 'Updated Item',
+        'currency': 'GBP',
+        'url': 'http://example.com/updated'
+    }]
+    
+    with app.app_context(), \
+         patch('app.utils.notifications.NotificationManager.send_price_drops') as mock_send:
+        # Process with full_scan=True
+        new, updated = process_items(test_data, test_query, check_existing=True, full_scan=True)
+        
+        mock_send.assert_called_once()
+        assert len(updated) == 1
+        assert existing.price == 55.0
+
+@patch('app.jobs.job_management.scrape_ebay')
+def test_full_scrape_job(mock_scrape, app, test_query):
+    # Mock return value with complete item data
+    mock_scrape.return_value = [{
+        'ebay_id': '456', 
+        'title': 'Full Test',
+        'price': 75.0,
+        'currency': 'GBP',
+        'query_id': test_query.id,
+        'url': 'http://example.com/full',
+        'keywords': test_query.keywords,
+        'last_updated': datetime.utcnow()
+    }]
+    
+    with app.app_context():
+        with db.session() as session:  # Use context manager
+            full_scrape_job(test_query.id)
+            updated_query = session.get(Query, test_query.id)
+            
+            # Verify item creation
+            item = Item.query.filter_by(ebay_id='456').first()
+            assert item is not None, "Item was not created"
+            assert item.title == 'Full Test'
+            
+            # Verify query timestamps
+            assert updated_query.last_full_run is not None
+            assert updated_query.next_full_run > datetime.utcnow()
+
+@patch('app.jobs.job_management.scrape_new_items')
+def test_recent_scrape_job(mock_scrape, app, test_query):
+    mock_scrape.return_value = [{
+        'ebay_id': '789', 
+        'title': 'Recent Test',
+        'price': 45.0,
+        'query_id': test_query.id
+    }]
+    
+    with app.app_context():
+        recent_scrape_job(test_query.id)
+        item = Item.query.filter_by(ebay_id='789').first()
+        assert item is not None
+
+def test_notification_preferences(app, test_user):
+    # Create associated query
     query = Query(
         keywords="test",
-        check_interval=5,
-        user_id=user.id  # Link to user
+        user=test_user,
+        min_price=10.0,
+        max_price=100.0,
+        check_interval=30
     )
-    session.add(query)
-    session.commit()
+    db.session.add(query)
+    db.session.commit()
     
-    with patch('app.jobs.query_jobs.scrape_ebay') as mock_scrape:
-        mock_scrape.return_value = []
-        check_query(query.id)
-        mock_scrape.assert_called_once_with(
-            keywords=query.keywords,
-            filters={
-                'min_price': query.min_price,
-                'max_price': query.max_price,
-                'item_location': query.item_location
-            },
-            marketplace=query.marketplace
-        )
+    test_data = [{
+        'ebay_id': '123', 
+        'price': 50.0,
+        'query_id': query.id,
+        'title': 'Test Item',
+        'currency': 'GBP',
+        'url': 'http://example.com/item123'
+    }]
+    
+    with app.app_context(), \
+         patch('app.utils.notifications.NotificationManager.send_price_drops') as mock_send:
+        process_items(test_data, query)
+        mock_send.assert_not_called()
+
 

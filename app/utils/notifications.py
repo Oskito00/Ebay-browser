@@ -34,28 +34,43 @@ class TelegramNotifier:
 
 class NotificationManager:
     @staticmethod
-    def send_item_notification(user, items):
-        if not user.telegram_connected or not items:
+    def send_item_notification(user, items, query=None):
+        # Check preferences and connection
+        if (not user.telegram_connected or 
+            not user.notification_preferences.get('new_items', True) or
+            not items):
             return False
-            
-        notifier = TelegramNotifier(
-            current_app.config['TELEGRAM_BOT_TOKEN'],
-            user.telegram_chat_id
-        )
         
-        # Format message
-        message = "<b>New Items Found!</b>\n\n"
-        for item in items[:10]:  # Limit to 10 items per message
-            message += (
-                f"🏷️ <a href='{item.url}'>{item.title}</a>\n"
-                f"💰 {item.price} {item.currency}\n"
-                f"📍 {item.location_country or 'N/A'}\n\n"
+        try:
+            notifier = TelegramNotifier(
+                current_app.config['TELEGRAM_BOT_TOKEN'],
+                user.telegram_chat_id
             )
-        
-        if len(items) > 10:
-            message += f"➕ {len(items)-10} more items found"
             
-        return notifier.send_message(message)
+            # Improved message formatting
+            query_text = f" for '{query.keywords}'" if query else ""
+            message = (
+                f"🎉 <b>New Items Found{query_text}!</b>\n\n"
+                f"📥 Total new items: {len(items)}\n\n"
+            )
+            
+            # Add top 3 items
+            for item in items[:3]:
+                message += (
+                    f"🏷️ <a href='{item.url}'>{item.title}</a>\n"
+                    f"💰 Price: {item.price} {item.currency}\n"
+                    f"📍 Location: {item.location_country or 'N/A'}\n\n"
+                )
+            
+            # Add view more link
+            if query:
+                message += f"🔍 <a href='{current_app.config['APP_URL']}/query/{query.id}'>View all items</a>"
+            
+            return notifier.send_message(message)
+        
+        except Exception as e:
+            current_app.logger.error(f"Notification failed: {str(e)}")
+            return False
     
     @staticmethod
     def send_test_notification(user):
@@ -71,30 +86,41 @@ class NotificationManager:
             return False
     
     @staticmethod
-    def send_price_alert(user, item, old_price):
-        if not NotificationHandler.should_notify(user, 'price_changes'):
-            return False
-            
+    def send_price_drops(user, drops):
         notifier = TelegramNotifier(
             current_app.config['TELEGRAM_BOT_TOKEN'],
             user.telegram_chat_id
         )
-        
-        message = NotificationManager.format_price_alert(user, item, old_price, item.price)
-        
-        return notifier.send_message(message)
-
+        for drop in drops:
+            message = (
+                "🛎️ **Price Alert**\n"
+                f"📦 Item: {drop['item'].title}\n"
+                f"💰 Price dropped from £{drop['old_price']} → £{drop['new_price']}\n"
+                f"🔗 [View Item]({drop['item'].url})"
+            )
+            if user.notify_price_drops:
+                notifier.send_message(message, parse_mode='Markdown')
+                
+    
     @staticmethod
-    def format_price_alert(user, item, old_price, new_price):
-        change_type = "dropped" if new_price < old_price else "increased"
-        percent = abs((new_price - old_price) / old_price) * 100
-        
-        return f"""
-        💰 Price {change_type} by {percent:.1f}% for {item.title}
-        🕒 {datetime.now().strftime('%Y-%m-%d %H:%M')}
-        💰 From {old_price} {item.currency} to {new_price} {item.currency}
-        🔗 {item.url}
-        📊 <a href="{url_for('item_detail', item_id=item.id, _external=True)}">Price History</a>
-        """.strip()
+    def send_auction_alerts(user, items):
+        notifier = TelegramNotifier(
+            current_app.config['TELEGRAM_BOT_TOKEN'],
+            user.telegram_chat_id
+        )
+        for item in items:
+            time_left = item.end_time - datetime.utcnow()
+            hours_left = round(time_left.total_seconds() / 3600, 1)
+            message = (
+                "⏳ **Auction Ending Soon**\n"
+                f"📦 Item: {item.title}\n"
+                f"💰 Current Price: £{item.price}\n"
+                f"⏰ Ends in: {hours_left} hours\n"
+                f"🔗 [View Item]({item.url})"
+            )
+            if user.notify_auction_end:
+                notifier.send_message(message, parse_mode='Markdown')
+    
+    
     
 

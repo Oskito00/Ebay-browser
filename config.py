@@ -38,18 +38,6 @@ class Config:
     def get(cls, key, default=None):
         return getattr(cls, key, default)
 
-class DevelopmentConfig(Config):
-    DEBUG = True
-    SERVER_NAME = 'localhost:5000'
-    PREFERRED_URL_SCHEME = 'http'
-
-class ProductionConfig(Config):
-    DEBUG = False
-    SERVER_NAME = 'yourdomain.com'
-    PREFERRED_URL_SCHEME = 'https'
-    WTF_CSRF_SSL_STRICT = True  # Enforce HTTPS for CSRF
-
-
 class TestingConfig(Config):
     EBAY_CLIENT_ID = os.getenv('EBAY_CLIENT_ID')
     EBAY_CLIENT_SECRET = os.getenv('EBAY_CLIENT_SECRET')
@@ -58,6 +46,18 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TELEGRAM_BOT_TOKEN = '7914809074'
+
+class SchedulerConfig(Config):
+    # Disable web features
+    WTF_CSRF_ENABLED = False
+    LOGIN_DISABLED = True
+    
+    # Smaller DB pool for scheduler
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 5,
+        'max_overflow': 2,
+        'pool_recycle': 3600
+    }
 
 config = {
     'development': Config,

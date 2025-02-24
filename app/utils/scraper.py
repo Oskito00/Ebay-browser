@@ -15,7 +15,7 @@ def scrape_ebay(keywords, filters=None, marketplace='EBAY_GB', required_keywords
             keywords=keywords,
             filters=filters,
             sort_order='newlyListed',
-            max_pages=2, #TODO: Change to None when ready
+            max_pages=4, #TODO: Change to None when ready
             marketplace=marketplace,
             required_keywords=required_keywords,
             excluded_keywords=excluded_keywords

@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
-from app.jobs.query_jobs import check_query
 from app.models import LongTermItem, Query, db, Item, copy_item
 from app.forms import QueryForm, DeleteForm  # Create this form if needed
 from decimal import Decimal
@@ -129,6 +128,7 @@ def create_query():
                 item_location=form.item_location.data,
                 user_id=current_user.id
             )
+            query.needs_scheduling = True
             print("Query object:", query.__dict__)  # Before add
             db.session.add(query)
             db.session.commit()

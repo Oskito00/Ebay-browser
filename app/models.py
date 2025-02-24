@@ -14,9 +14,9 @@ class User(UserMixin, db.Model):
     telegram_connected = db.Column(db.Boolean, default=False)
     telegram_notifications_enabled = db.Column(db.Boolean, default=False)
     notification_preferences = db.Column(db.JSON, default={
-        'price_changes': True,
+        'price_drops': True,
         'new_items': True,
-        'interval': 'immediate'
+        'auction_alerts': True,
     })
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
@@ -48,14 +48,18 @@ class Query(db.Model):
     buying_options = db.Column(db.String(50), default='FIXED_PRICE|AUCTION')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
-    is_active = db.Column(db.Boolean, default=False)
     last_checked = db.Column(db.DateTime)
     limit = db.Column(db.Integer, default=200)
     total_items = db.Column(db.Integer)  # Track total found
     price_alert_threshold = db.Column(db.Float, default=5.0)  # Percentage threshold
     marketplace = db.Column(db.String(10), nullable=False, default='EBAY_GB')
     item_location = db.Column(db.String(10), nullable=False, default='GB')
-    
+    last_full_run = db.Column(db.DateTime)
+    next_full_run = db.Column(db.DateTime)
+    last_recent_run = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    needs_scheduling = db.Column(db.Boolean, default=True, index=True)
+
     search_items = db.relationship(
         'Item', 
         back_populates='search_query', 
