@@ -10,35 +10,39 @@ from sqlalchemy.orm import Session
 
 
 def full_scrape_job(query_id):
-    with db.session() as session:
-        query = session.get(Query, query_id)
-        if not query or not query.is_active:
-            return
+    try:
+        with db.session.begin() as session:  # Auto-commit/rollback
+            query = session.get(Query, query_id)
+            if not query or not query.is_active:
+                return
 
-        try:
-            items = scrape_ebay(
-                query.keywords,
-                filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
-                required_keywords=query.required_keywords,
-                excluded_keywords=query.excluded_keywords,
-                marketplace=query.marketplace
-            )
-            process_items(items, query, full_scan=True)
-            
-            # Only update timestamps
-            query.last_full_run = datetime.utcnow()
-            query.next_full_run = datetime.utcnow() + timedelta(hours=24)
-            session.commit()
-            
-        except Exception as e:
-            session.rollback()
-            current_app.logger.error(f"Full scrape failed: {e}")
+            try:
+                items = scrape_ebay(
+                    query.keywords,
+                    filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
+                    required_keywords=query.required_keywords,
+                    excluded_keywords=query.excluded_keywords,
+                    marketplace=query.marketplace
+                )
+                process_items(items, query, full_scan=True)
+                
+                # Only update timestamps
+                query.last_full_run = datetime.utcnow()
+                query.next_full_run = datetime.utcnow() + timedelta(hours=24)
+                session.commit()
+                
+            except Exception as e:
+                session.rollback()
+                current_app.logger.error(f"Full scrape failed: {e}")
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}")
 
 def recent_scrape_job(query_id):
-    with db.session() as session:
-        query = session.get(Query, query_id)
-        if not query or not query.is_active:
-            return
+    try:
+        with db.session.begin() as session:  # Auto-commit/rollback
+            query = session.get(Query, query_id)
+            if not query or not query.is_active:
+                return
 
         try:
             new_items = scrape_new_items(
@@ -52,6 +56,8 @@ def recent_scrape_job(query_id):
             
         except Exception as e:
             current_app.logger.error(f"Recent scrape failed: {e}")
+    except Exception as e:
+        current_app.logger.error(f"Error: {e}")
 
 def process_items(items, query, check_existing=False, full_scan=False):
     new_items = []

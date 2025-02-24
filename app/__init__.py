@@ -42,7 +42,8 @@ def create_app(config_class=None):
     with app.app_context():
         app.scheduler_jobstore = SQLAlchemyJobStore(engine=db.get_engine())
 
-    from app.scheduler.cli import start_scheduler
+    from app.scheduler.cli import init_scheduler, start_scheduler
+    app.cli.add_command(init_scheduler)
     app.cli.add_command(start_scheduler)
     
 

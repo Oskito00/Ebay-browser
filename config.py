@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 import logging
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from sqlalchemy import create_engine
 
 load_dotenv()  # Load .env file
 
@@ -46,18 +48,25 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TELEGRAM_BOT_TOKEN = '7914809074'
+    SCHEDULER_LOGGING_LEVEL = 'DEBUG'  # Add this line
 
-class SchedulerConfig(Config):
-    # Disable web features
-    WTF_CSRF_ENABLED = False
-    LOGIN_DISABLED = True
+class SchedulerConfig:
+    # Use main app's database
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///instance/app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Smaller DB pool for scheduler
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 5,
-        'max_overflow': 2,
-        'pool_recycle': 3600
+    SCHEDULER_JOBSTORES = {
+        'default': SQLAlchemyJobStore(
+            engine=create_engine(SQLALCHEMY_DATABASE_URI)
+        )
     }
+    
+    SCHEDULER_TIMEZONE = 'UTC'
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_ECHO = True
+    SCHEDULER_LOGGING_LEVEL = 'DEBUG'  # Add this line
 
 config = {
     'development': Config,

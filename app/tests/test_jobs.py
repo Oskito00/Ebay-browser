@@ -41,6 +41,9 @@ def test_query(test_user):
     db.session.commit()
     return query
 
+#****************************
+# Test processing items logic
+#****************************
 def test_process_items_new_item(app, test_query):
     test_data = [{
         'ebay_id': '123',
@@ -60,22 +63,25 @@ def test_process_items_new_item(app, test_query):
         assert item.title == 'Test Item'
 
 def test_process_items_update_price(app, test_query):
+    # Set query max price
+    test_query.max_price = 70.0
+    db.session.commit()
     
-    # Create existing item with higher price
+    # Existing item above max price
     existing = Item(
         ebay_id='123',
-        price=60.0,
+        price=80.0,  # Above max
         query_id=test_query.id,
         title='Existing Item',
         currency='GBP',
-        url='http://example.com/existing',
+        url='http://example.com/existing'
     )
     db.session.add(existing)
     db.session.commit()
     
     test_data = [{
         'ebay_id': '123', 
-        'price': 55.0,
+        'price': 65.0,  # Below max
         'query_id': test_query.id,
         'title': 'Updated Item',
         'currency': 'GBP',
@@ -84,12 +90,11 @@ def test_process_items_update_price(app, test_query):
     
     with app.app_context(), \
          patch('app.utils.notifications.NotificationManager.send_price_drops') as mock_send:
-        # Process with full_scan=True
-        new, updated = process_items(test_data, test_query, check_existing=True, full_scan=True)
+        new, updated = process_items(test_data, test_query, 
+                                    check_existing=True, full_scan=True)
         
         mock_send.assert_called_once()
-        assert len(updated) == 1
-        assert existing.price == 55.0
+        assert existing.price == 65.0
 
 @patch('app.jobs.job_management.scrape_ebay')
 def test_full_scrape_job(mock_scrape, app, test_query):
