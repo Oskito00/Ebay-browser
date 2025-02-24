@@ -11,5 +11,6 @@ def init_scheduler(flask_app):
         check_queries,
         'interval',
         seconds=30,
-        id='query_check'
+        id='query_check',
+        replace_existing=True
     )
