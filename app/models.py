@@ -3,6 +3,7 @@ from app.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.dialects.postgresql import NUMERIC
+from sqlalchemy import DateTime
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -46,7 +47,7 @@ class Query(db.Model):
     excluded_keywords = db.Column(db.String(255))
     condition = db.Column(db.String(50))
     buying_options = db.Column(db.String(50), default='FIXED_PRICE|AUCTION')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     filters = db.Column(db.JSON)  # {min_price, max_price, condition, etc}
     last_checked = db.Column(db.DateTime)
     limit = db.Column(db.Integer, default=200)
@@ -54,9 +55,9 @@ class Query(db.Model):
     price_alert_threshold = db.Column(db.Float, default=5.0)  # Percentage threshold
     marketplace = db.Column(db.String(10), nullable=False, default='EBAY_GB')
     item_location = db.Column(db.String(10), nullable=False, default='GB')
-    last_full_run = db.Column(db.DateTime)
-    next_full_run = db.Column(db.DateTime)
-    last_recent_run = db.Column(db.DateTime)
+    last_full_run = db.Column(DateTime(timezone=True))
+    next_full_run = db.Column(DateTime(timezone=True))
+    last_recent_run = db.Column(DateTime(timezone=True))
     is_active = db.Column(db.Boolean, default=True)
     needs_scheduling = db.Column(db.Boolean, default=True, index=True)
 
