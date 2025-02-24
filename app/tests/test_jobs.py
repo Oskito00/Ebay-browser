@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta
 from app import create_app, db
 from app.models import User, Query, Item
-from app.jobs.job_management import process_items, full_scrape_job, recent_scrape_job
+from app.jobs.query_check import process_items, full_scrape_job, recent_scrape_job
 from unittest.mock import patch
 
 @pytest.fixture

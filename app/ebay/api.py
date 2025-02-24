@@ -7,6 +7,7 @@ from app.utils.parsing_helpers import parse_date
 from app.utils.text_helpers import filter_items
 from .constants import MARKETPLACE_IDS
 import logging
+from tenacity import retry, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,11 @@ class EbayAPI:
         self.currency = self.marketplace_config['currency']
         self._get_token()  # Fetch initial token
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,  # Allow 10 simultaneous connections
+            pool_maxsize=100      # Queue up to 100 requests
+        )
+        self.session.mount('https://', adapter)
     
     def _token_needs_refresh(self):
         """Check if token needs refresh (60 second buffer)"""
@@ -121,6 +127,7 @@ class EbayAPI:
         response.raise_for_status()
         return response.json()
     
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=10))
     def custom_search_query(self, keywords, filters=None, sort_order=None, max_pages=None, marketplace=None, search_for_sold=False, required_keywords=None, excluded_keywords=None):
         """
         The user can decide what they want to search for in this function

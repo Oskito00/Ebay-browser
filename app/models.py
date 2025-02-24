@@ -106,9 +106,12 @@ class Item(ItemBase):
 class LongTermItem(ItemBase):
     __tablename__ = 'long_term_items'
     
+    def get_utc_now():
+        return datetime.now(timezone.utc)
+
     recorded_at = db.Column(
         db.DateTime, 
-        default=lambda: datetime.now(timezone.utc)
+        default=get_utc_now
     )
     
     __table_args__ = (

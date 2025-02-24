@@ -1,12 +1,14 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 import time
-from app import db
+from app import db, scheduler
 from app.models import Query, Item
 from app.utils.notifications import NotificationManager
 from app.utils.scraper import scrape_ebay, scrape_new_items
 from flask import current_app
 from sqlalchemy import inspect
-from sqlalchemy.orm import Session
+from app.scheduler.core import scheduler  # Import the instance
+from app.scheduler.job_manager import add_query_jobs, remove_query_jobs
+
 
 
 def full_scrape_job(query_id):
@@ -132,3 +134,28 @@ def process_items(items, query, check_existing=False, full_scan=False):
         db.session.rollback()
         current_app.logger.error(f"Item processing failed: {str(e)}")
         raise
+
+
+def check_queries():
+    app = scheduler.flask_app
+    with app.app_context():
+        print(Query.query.count())
+        # Get active queries
+        active = {q.id for q in Query.query.filter_by(is_active=True).all()}
+        
+        scheduled = set()
+        for job in scheduler.get_jobs():
+            if job.id.startswith('query_'):
+                try:
+                    q_id = int(job.id.split('_')[1])
+                    scheduled.add(q_id)
+                except (ValueError, IndexError):
+                    pass
+        
+        # Add missing jobs
+        for qid in active - scheduled:
+            add_query_jobs(qid)  # Call helper function
+            
+        # Remove deleted jobs
+        for qid in scheduled - active:
+            remove_query_jobs(qid)  # Call helper function

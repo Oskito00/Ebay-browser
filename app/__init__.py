@@ -8,6 +8,8 @@ from .forms import csrf
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import os
+from app.scheduler import init_scheduler
+
 
 csrf = CSRFProtect()
 
@@ -16,7 +18,9 @@ scheduler = None
 def create_app(config_class=None):
     load_dotenv(override=True)
     app = Flask(__name__)
-    
+
+    #Initialises scheduler
+    init_scheduler(app)
     # Determine configuration
     if config_class:
         app.config.from_object(config_class)
@@ -42,8 +46,7 @@ def create_app(config_class=None):
     with app.app_context():
         app.scheduler_jobstore = SQLAlchemyJobStore(engine=db.get_engine())
 
-    from app.scheduler.cli import init_scheduler, start_scheduler
-    app.cli.add_command(init_scheduler)
+    from app.scheduler.cli import start_scheduler
     app.cli.add_command(start_scheduler)
     
 

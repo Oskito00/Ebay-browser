@@ -1,5 +1,5 @@
 from app.models import Item, Query, User
-from app.jobs import job_management  # Add this import
+from app.jobs import query_check  # Add this import
 from unittest.mock import patch
 
 
@@ -26,7 +26,7 @@ def test_debug_scraper_and_db(app, session):
             }]
 
             # Run check_query
-            from app.jobs.job_management import check_query
+            from app.jobs.query_check import check_query
             check_query(query.id)
             
             # Verify scraper called with correct args
@@ -80,7 +80,7 @@ def test_telegram_notification(app, session):
             }]
 
             # Run query check
-            from app.jobs.job_management import check_query
+            from app.jobs.query_check import check_query
             check_query(query.id)
             
             # Verify notification sent
@@ -123,11 +123,11 @@ def test_telegram_notification_flow(app, session):
                 'currency': 'GBP',
                 'url': 'http://first.item'
             }]
-            job_management.check_query(query.id)
+            query_check.check_query(query.id)
             mock_telegram.return_value.send_message.assert_not_called()
 
             # Second run - same item (no notification)
-            job_management.check_query(query.id)
+            query_check.check_query(query.id)
             mock_telegram.return_value.send_message.assert_not_called()
 
             # Third run - new item (send notification)
@@ -147,7 +147,7 @@ def test_telegram_notification_flow(app, session):
                     'url': 'http://new.item'
                 }
             ]
-            job_management.check_query(query.id)
+            query_check.check_query(query.id)
             
             # Verify notification
             mock_telegram.return_value.send_message.assert_called_once()
