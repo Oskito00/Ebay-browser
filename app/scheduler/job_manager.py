@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from .core import scheduler
 from app.models import Query
 from app import db
@@ -13,7 +13,7 @@ def add_query_jobs(query_id):
         hours=24,
         args=[query_id],
         id=f'query_{query_id}_full',
-        next_run_time=datetime.utcnow(),  # First run now
+        next_run_time=datetime.now(timezone.utc),  # First run now
         misfire_grace_time=3600,  # 1 hour grace period
         coalesce=True  # Combine missed runs
     )

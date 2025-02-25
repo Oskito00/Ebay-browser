@@ -80,7 +80,7 @@ class NotificationManager:
                 user.telegram_chat_id
             )
             print("Trying to send test notification")
-            return notifier.send_message("Test notification sent")
+            return notifier.send_message("CIAO CALOJERO CI STO LAVORANDO ADESSO")
         except Exception as e:
             print(f"Error sending test notification: {str(e)}")
             return False
