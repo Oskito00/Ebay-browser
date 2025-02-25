@@ -13,46 +13,57 @@ from app.scheduler.job_manager import add_query_jobs, remove_query_jobs
 
 def full_scrape_job(query_id):
     app = current_app._get_current_object() if current_app else scheduler.flask_app
-    print(f"[DEBUG] App context: {app}")  # Debug 1
+    app.logger.debug(f"[Job {query_id}] Starting full scrape")
     
     with app.app_context():
+        app.logger.debug(f"[Job {query_id}] App context entered")
+        
+        session = db.session()
+        app.logger.debug(f"[Job {query_id}] Session created: {id(session)}")
+        
         try:
-            session = db.session
-            print(f"[DEBUG] Session type: {type(session)}")  # Debug 2
-            
             with session.begin():
-                print("[DEBUG] Inside transaction context")  # Debug 3
+                # Get and check query
                 query = session.query(Query).get(query_id)
-                print(f"[DEBUG] Query retrieved: {query}")  # Debug 4
+                app.logger.debug(f"[Job {query_id}] Query status: {'Active' if query and query.is_active else 'Inactive/Missing'}")
                 
                 if not query or not query.is_active:
-                    print("[DEBUG] Query inactive or missing")  # Debug 5
+                    app.logger.debug(f"[Job {query_id}] Aborting - no active query")
                     return
 
-                try:
-                    print("[DEBUG] Starting scrape")  # Debug 6
-                    items = scrape_ebay(
-                        query.keywords,
-                        filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
-                        required_keywords=query.required_keywords,
-                        excluded_keywords=query.excluded_keywords,
-                        marketplace=query.marketplace
-                    )
-                    process_items(items, query, full_scan=True)
-                    
-                    # Use timezone-aware datetimes
-                    now = datetime.now(timezone.utc)
-                    query.last_full_run = now
-                    query.next_full_run = now + timedelta(hours=24)
-                    print("[DEBUG] Updates applied")  # Debug 7
-                    
-                except Exception as e:
-                    print(f"[DEBUG] Scrape error: {e}")  # Debug 8
-                    session.rollback()
-                    app.logger.error(f"Full scrape failed: {e}")
+            # Scraping (outside transaction)
+            app.logger.debug(f"[Job {query_id}] Scraping eBay...")
+            items = scrape_ebay(
+                query.keywords,
+                filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
+                required_keywords=query.required_keywords,
+                excluded_keywords=query.excluded_keywords,
+                marketplace=query.marketplace
+            )
+            app.logger.debug(f"[Job {query_id}] Found {len(items)} items")
+            if query.needs_scheduling == True:
+                #It is the first time the query has been run
+                process_items(items, query, full_scan=True, notify=False)
+            else:
+                #It is not the first time the query has been run
+                process_items(items, query, full_scan=True, notify=True)
+            app.logger.debug(f"[Job {query_id}] Processed {len(items)} items")
+
+            # Update timestamps in same session
+            
+            app.logger.debug(f"[Job {query_id}] Updating query fields")
+            
+            query.last_full_run = datetime.now(timezone.utc)
+            query.next_full_run = datetime.now(timezone.utc) + timedelta(hours=24)
+            query.needs_scheduling = False
+            db.session.commit()
+            app.logger.debug(f"[Job {query_id}] Query fields updated")
         except Exception as e:
-            print(f"[DEBUG] Outer error: {e}")  # Debug 9
-            app.logger.error(f"Error: {e}")
+            app.logger.error(f"[Job {query_id}] Error: {str(e)}", exc_info=True)
+        finally:
+            session.close()
+            db.session.remove()
+            app.logger.debug(f"[Job {query_id}] Session closed and removed")
 
 def recent_scrape_job(query_id):
     app = current_app._get_current_object() if current_app else scheduler.flask_app
@@ -75,14 +86,17 @@ def recent_scrape_job(query_id):
                     excluded_keywords=query.excluded_keywords,
                     marketplace=query.marketplace
                 )
-                process_items(new_items, query, check_existing=False)
+                process_items(new_items, query, check_existing=False, notify=True)
+
+                query.last_recent_run = datetime.now(timezone.utc)
+                db.session.commit()
                 
             except Exception as e:
                 app.logger.error(f"Recent scrape failed: {e}")
         except Exception as e:
             app.logger.error(f"Error: {e}")
 
-def process_items(items, query, check_existing=False, full_scan=False):
+def process_items(items, query, check_existing=False, full_scan=False, notify=True):
     new_items = []
     updated_items = []
     price_drops = []
@@ -94,7 +108,7 @@ def process_items(items, query, check_existing=False, full_scan=False):
         item_data.update({
             'query_id': query.id,
             'keywords': query.keywords,
-            'last_updated': datetime.utcnow()
+            'last_updated': datetime.now(timezone.utc)
         })
         
         # Find existing item
@@ -122,7 +136,8 @@ def process_items(items, query, check_existing=False, full_scan=False):
 
         # Price drop check (only during full scans)
         if full_scan and existing and old_price is not None:
-            if new_price < old_price and new_price <= query.max_price:
+            # Handle cases where query.max_price might be None
+            if new_price < old_price and (query.max_price is None or new_price <= query.max_price):
                 price_drops.append({
                     'item': existing,
                     'old_price': old_price,
@@ -131,7 +146,7 @@ def process_items(items, query, check_existing=False, full_scan=False):
 
         # Auction ending detection
         end_time = item_data.get('end_time')
-        if end_time and (end_time - datetime.utcnow()) < timedelta(hours=12):
+        if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
             ending_auctions.append(existing)
 
     try:
@@ -139,15 +154,16 @@ def process_items(items, query, check_existing=False, full_scan=False):
         user = query.user
         prefs = user.notification_preferences
 
-        # Send notifications
-        if new_items and prefs.get('new_items', True):
-            NotificationManager.send_item_notification(user, new_items)
+        if notify:
+            # Send notifications
+            if new_items and prefs.get('new_items', True):
+                NotificationManager.send_item_notification(user, new_items)
             
-        if price_drops and prefs.get('price_drops', True):
-            NotificationManager.send_price_drops(user, price_drops)
+            if price_drops and prefs.get('price_drops', True):
+                NotificationManager.send_price_drops(user, price_drops)
             
-        if ending_auctions and prefs.get('auction_alerts', True):
-            NotificationManager.send_auction_alerts(user, ending_auctions)
+            if ending_auctions and prefs.get('auction_alerts', True):
+                NotificationManager.send_auction_alerts(user, ending_auctions)
 
         return new_items, updated_items
 
@@ -160,23 +176,22 @@ def process_items(items, query, check_existing=False, full_scan=False):
 def check_queries():
     app = scheduler.flask_app
     with app.app_context():
-        print(Query.query.count())
-        # Get active queries
-        active = {q.id for q in Query.query.filter_by(is_active=True).all()}
+        # Get active query UUIDs
+        active = {str(q.id) for q in Query.query.filter_by(is_active=True).all()}
         
+        # Get scheduled UUIDs from job IDs
         scheduled = set()
         for job in scheduler.get_jobs():
             if job.id.startswith('query_'):
-                try:
-                    q_id = int(job.id.split('_')[1])
-                    scheduled.add(q_id)
-                except (ValueError, IndexError):
-                    pass
+                parts = job.id.split('_')
+                if len(parts) >= 3:
+                    uuid_str = '_'.join(parts[1:-1])  # Handle UUIDs with underscores
+                    scheduled.add(uuid_str)
         
         # Add missing jobs
         for qid in active - scheduled:
-            add_query_jobs(qid)  # Call helper function
+            add_query_jobs(qid)
             
         # Remove deleted jobs
         for qid in scheduled - active:
-            remove_query_jobs(qid)  # Call helper function
+            remove_query_jobs(qid)

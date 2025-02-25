@@ -27,7 +27,7 @@ def manage_queries():
     delete_form = DeleteForm()
     return render_template('queries/manage.html', queries=queries, delete_form=delete_form)
 
-@bp.route('/<int:query_id>', methods=['GET', 'POST'])
+@bp.route('/<string:query_id>', methods=['GET', 'POST'])
 @login_required #TODO: Edit query button is not calling this function/ generally not working
 def edit_query(query_id):
     query = Query.query.get_or_404(query_id)
@@ -40,7 +40,7 @@ def edit_query(query_id):
         
     return render_template('queries/edit.html', form=form, query=query)
 
-@bp.route('/queries/<int:query_id>/delete', methods=['POST'])
+@bp.route('/queries/<string:query_id>/delete', methods=['POST'])
 @login_required
 def delete_query(query_id):
     print("Delete query called")
@@ -200,16 +200,12 @@ def load_historical_items(query):
         {col.name: getattr(item, col.name) for col in LongTermItem.__table__.columns}
         for item in historical
     ]
-
-    print("Historical dicts:", hist_dicts)
     
     filtered_dicts = filter_items(
         hist_dicts,
         query.required_keywords,
         query.excluded_keywords
     )
-
-    print("Filtered dicts:", filtered_dicts)
     
     # Map back to original objects
     filtered_objs = [
@@ -220,9 +216,16 @@ def load_historical_items(query):
     print("Filtered objs:", filtered_objs)
     
     # Apply additional filters
+    for item in filtered_objs:
+        print("Item:", item)
+        print("Marketplace:", item.marketplace)
+        print("Location:", item.location_country)
+        print("Query marketplace:", query.marketplace)
+        print("Query location:", query.item_location)
+        print("Item matches query:", (item.marketplace == query.marketplace) and (item.location_country == query.item_location))
     final_filtered = [
         item for item in filtered_objs
-        if (item.marketplace == query.marketplace) and
+        if (item.marketplace == query.marketplace) or
            (item.location_country == query.item_location)   
             ]
 
@@ -230,7 +233,9 @@ def load_historical_items(query):
     
     # Check for existing items
     new_items = []
+    print("Checking for existing items...")
     for hist in final_filtered:
+        
         does_exist = db.session.query(
             exists().where(
                 (Item.query_id == query.id) &
@@ -239,11 +244,15 @@ def load_historical_items(query):
         ).scalar()
         
         if not does_exist:
+            print("Item does not exist, adding to new_items")
             new_item = Item(query_id=query.id)
             copy_item(hist, new_item)
             new_items.append(new_item)
+        else:
+            print("Item already exists, skipping")
     
     if new_items:
+        print("New items found, adding to DB")
         print("New items to add:", new_items)
         db.session.add_all(new_items)
         db.session.commit()

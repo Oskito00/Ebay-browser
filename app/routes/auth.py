@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, app, render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required
 from app.models import User
 from app.forms import LoginForm, RegistrationForm
@@ -32,12 +32,27 @@ def login():
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(email=form.email.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-        login_user(user)
-        return redirect(url_for('queries.manage_queries'))
+        # Check if email exists
+        existing_user = User.query.filter_by(email=form.email.data).first()
+        if existing_user:
+            print("User already exists")
+            flash('This email is already registered. Please use a different email.', 'danger')
+            return render_template('auth/register.html', form=form)
+        
+        try:
+            user = User(email=form.email.data)
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            login_user(user)
+            print(f"User logged in: {user.email}")
+            flash('Registration successful!', 'success')
+            return redirect(url_for('queries.manage_queries'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Registration failed. Please try again.', 'danger')
+            app.logger.error(f"Registration error: {str(e)}")
+    
     return render_template('auth/register.html', form=form)
 
 @bp.route('/logout')

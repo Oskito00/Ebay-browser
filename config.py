@@ -26,8 +26,7 @@ class Config:
         'echo_pool': False,
         'hide_parameters': True
     }
-    LOG_LEVEL = logging.WARNING
-    ENABLE_SCHEDULER = True  # Set to True when ready
+    LOG_LEVEL = 'INFO'
     TESTING = False
 
     @classmethod
@@ -48,7 +47,6 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TELEGRAM_BOT_TOKEN = '7914809074'
-    SCHEDULER_LOGGING_LEVEL = 'DEBUG'  # Add this line
 
 class SchedulerConfig:
     # Use main app's database
@@ -64,9 +62,8 @@ class SchedulerConfig:
     SCHEDULER_TIMEZONE = 'UTC'
 
 class DevelopmentConfig(Config):
-    DEBUG = True
-    SQLALCHEMY_ECHO = True
-    SCHEDULER_LOGGING_LEVEL = 'DEBUG'  # Add this line
+    DEBUG = False
+    SQLALCHEMY_ECHO = False
 
 config = {
     'development': Config,

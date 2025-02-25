@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import uuid
 from app.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -37,7 +38,7 @@ class User(UserMixin, db.Model):
 class Query(db.Model):
     __tablename__ = 'queries'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     keywords = db.Column(db.String(255), nullable=False)
     check_interval = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
