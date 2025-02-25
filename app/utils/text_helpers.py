@@ -1,7 +1,8 @@
 import re
+from decimal import Decimal, InvalidOperation
 
 
-def filter_items(items, required_keywords, excluded_keywords):
+def filter_items_by_keywords(items, required_keywords, excluded_keywords, min_price=None, max_price=None):
     # Convert None to empty string for safety
     required = required_keywords or ''
     excluded = excluded_keywords or ''
@@ -21,7 +22,7 @@ def filter_items(items, required_keywords, excluded_keywords):
         # Split into words from both title and description
         words = set(re.findall(r'\w+', full_text))
         processed.append((item, full_text, words))
-    
+
     # Filter logic
     filtered = []
     for item, full_text, words in processed:
@@ -38,6 +39,38 @@ def filter_items(items, required_keywords, excluded_keywords):
         ) if excl_kws else True
         
         if req_ok and excl_ok:
+            filtered.append(item)
+    
+    return filtered
+
+def filter_items_by_price(items, min_price=None, max_price=None):
+    filtered = []
+    
+    for item in items:
+        try:
+            # Convert all prices to Decimal
+            item_price = Decimal(str(item.get('price'))) if item.get('price') else None
+            min_dec = Decimal(str(min_price)) if min_price else None
+            max_dec = Decimal(str(max_price)) if max_price else None
+        except (InvalidOperation, TypeError) as e:
+            print(f"Price conversion error: {e}")
+            continue  # Skip invalid items
+
+        if item_price is None:
+            continue  # Skip items without price
+
+        # Calculate buffer bounds
+        lower_bound = min_dec * Decimal('0.5') if min_dec else None
+        upper_bound = max_dec * Decimal('2') if max_dec else None
+
+        # Check if price is outside buffer
+        price_ok = True
+        if min_dec and item_price < lower_bound:
+            price_ok = False
+        if max_dec and item_price > upper_bound:
+            price_ok = False
+
+        if price_ok:
             filtered.append(item)
     
     return filtered

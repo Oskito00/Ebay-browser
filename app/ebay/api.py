@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from flask import current_app
 import time
 from app.utils.parsing_helpers import parse_date
-from app.utils.text_helpers import filter_items
+from app.utils.text_helpers import filter_items_by_keywords
 from .constants import MARKETPLACE_IDS
 import logging
 from tenacity import retry, wait_exponential
@@ -153,7 +153,7 @@ class EbayAPI:
             parsed_items = self.parse_response(raw_response)
             
             # Filter before appending
-            filtered_batch = filter_items(parsed_items, required_keywords, excluded_keywords)
+            filtered_batch = filter_items_by_keywords(parsed_items, required_keywords, excluded_keywords)
             returned_items.extend(filtered_batch)
             
             offset += len(parsed_items)

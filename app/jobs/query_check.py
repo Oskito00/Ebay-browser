@@ -97,13 +97,21 @@ def recent_scrape_job(query_id):
             app.logger.error(f"Error: {e}")
 
 def process_items(items, query, check_existing=False, full_scan=False, notify=True):
+    app = current_app._get_current_object()
+    app.logger.debug(f"[Process Items] Starting processing for query {query.id}")
+    app.logger.debug(f"[Process Items] Received {len(items)} items from scrape")
+
     new_items = []
     updated_items = []
     price_drops = []
     ending_auctions = []
     item_columns = {c.key for c in inspect(Item).mapper.column_attrs}
 
-    for item_data in items:
+    new_items_count = 0
+    existing_items_count = 0
+    price_change_count = 0
+
+    for idx, item_data in enumerate(items):
         # Add query context
         item_data.update({
             'query_id': query.id,
@@ -117,15 +125,26 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
             (Item.query_id == query.id)
         ).first()
 
+        if existing:
+            existing_items_count += 1
+            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.id})")
+        else:
+            new_items_count += 1
+            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item detected (eBay ID: {item_data['ebay_id']})")
+
         # Track price changes
         old_price = existing.price if existing else None
         new_price = item_data.get('price')
 
         if existing:
             # Update existing item
+            update_count = 0
             for key in item_columns - {'id', 'query_id'}:
-                if key in item_data:
+                if key in item_data and getattr(existing, key) != item_data[key]:
+                    update_count += 1
                     setattr(existing, key, item_data[key])
+            if update_count > 0:
+                app.logger.debug(f"[Process Items] Updated {update_count} fields for item {existing.id}")
             updated_items.append(existing)
         else:
             # Create new item
@@ -134,42 +153,59 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
             db.session.add(new_item)
             new_items.append(new_item)
 
-        # Price drop check (only during full scans)
+        # Price drop check
         if full_scan and existing and old_price is not None:
-            # Handle cases where query.max_price might be None
             if new_price < old_price and (query.max_price is None or new_price <= query.max_price):
-                price_drops.append({
-                    'item': existing,
-                    'old_price': old_price,
-                    'new_price': new_price
-                })
+                price_change_count += 1
+                app.logger.debug(f"[Process Items] Price drop detected: {old_price} -> {new_price} (Item {existing.id})")
 
         # Auction ending detection
         end_time = item_data.get('end_time')
         if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
             ending_auctions.append(existing)
+            app.logger.debug(f"[Process Items] Auction ending soon: {end_time} (Item {existing.id if existing else 'new'})")
 
     try:
+        app.logger.debug(f"[Process Items] Committing changes to database")
+        app.logger.debug(f"[Process Items] New items: {new_items_count}, Updated items: {len(updated_items)}")
+        
         db.session.commit()
+        
+        app.logger.debug(f"[Process Items] Commit successful")
+        app.logger.debug(f"[Process Items] Total price drops detected: {price_change_count}")
+        app.logger.debug(f"[Process Items] Auctions ending soon: {len(ending_auctions)}")
+
         user = query.user
         prefs = user.notification_preferences
 
         if notify:
-            # Send notifications
+            app.logger.debug(f"[Process Items] Sending notifications (prefs: {prefs})")
+            
+            notification_counts = {
+                'new_items': 0,
+                'price_drops': 0,
+                'auction_alerts': 0
+            }
+
             if new_items and prefs.get('new_items', True):
+                notification_counts['new_items'] = len(new_items)
                 NotificationManager.send_item_notification(user, new_items)
             
             if price_drops and prefs.get('price_drops', True):
+                notification_counts['price_drops'] = len(price_drops)
                 NotificationManager.send_price_drops(user, price_drops)
             
             if ending_auctions and prefs.get('auction_alerts', True):
+                notification_counts['auction_alerts'] = len(ending_auctions)
                 NotificationManager.send_auction_alerts(user, ending_auctions)
+
+            app.logger.debug(f"[Process Items] Notifications sent: {notification_counts}")
 
         return new_items, updated_items
 
     except Exception as e:
+        app.logger.error(f"[Process Items] Database commit failed: {str(e)}")
         db.session.rollback()
-        current_app.logger.error(f"Item processing failed: {str(e)}")
         raise
 
 

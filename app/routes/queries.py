@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
 
 from app.utils.notifications import NotificationManager
-from app.utils.text_helpers import filter_items
+from app.utils.text_helpers import filter_items_by_keywords, filter_items_by_price
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -167,7 +167,6 @@ def create_query():
 def archive_items(query):
     """Archive items to long-term storage"""
     for item in query.search_items.all():  # Changed from .items
-        print("Archiving item:", item)
         existing = LongTermItem.query.filter_by(
             ebay_id=item.ebay_id,
             keywords=query.keywords
@@ -201,12 +200,19 @@ def load_historical_items(query):
         for item in historical
     ]
     
-    filtered_dicts = filter_items(
+    print("Running filter items")
+    filtered_dicts = filter_items_by_keywords(
         hist_dicts,
         query.required_keywords,
-        query.excluded_keywords
+        query.excluded_keywords,
     )
-    
+
+    filtered_dicts = filter_items_by_price(
+        filtered_dicts,
+        query.min_price,
+        query.max_price
+    )
+
     # Map back to original objects
     filtered_objs = [
         item for item in historical
@@ -215,14 +221,6 @@ def load_historical_items(query):
 
     print("Filtered objs:", filtered_objs)
     
-    # Apply additional filters
-    for item in filtered_objs:
-        print("Item:", item)
-        print("Marketplace:", item.marketplace)
-        print("Location:", item.location_country)
-        print("Query marketplace:", query.marketplace)
-        print("Query location:", query.item_location)
-        print("Item matches query:", (item.marketplace == query.marketplace) and (item.location_country == query.item_location))
     final_filtered = [
         item for item in filtered_objs
         if (item.marketplace == query.marketplace) or
@@ -244,12 +242,9 @@ def load_historical_items(query):
         ).scalar()
         
         if not does_exist:
-            print("Item does not exist, adding to new_items")
             new_item = Item(query_id=query.id)
             copy_item(hist, new_item)
             new_items.append(new_item)
-        else:
-            print("Item already exists, skipping")
     
     if new_items:
         print("New items found, adding to DB")
