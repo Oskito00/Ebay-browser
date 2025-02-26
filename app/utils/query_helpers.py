@@ -1,7 +1,6 @@
 from decimal import Decimal, InvalidOperation
 from app import db
 
-MAX_DAILY_USAGE = 4000  # Example limit: 10,000 daily calls per user
 
 def calculate_daily_runs(check_interval):
     """Calculate daily runs based on check interval in minutes"""
@@ -15,7 +14,7 @@ def update_user_usage(user, query, operation='add'):
         
         if operation == 'add':
             new_usage = user.user_query_usage + daily_runs
-            if new_usage > MAX_DAILY_USAGE:
+            if new_usage > user.user_query_limit:
                 raise ValueError("This query would exceed your daily limit")
             user.user_query_usage = new_usage
         elif operation == 'remove':

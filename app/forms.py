@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField, SelectMultipleField, DecimalField
+from wtforms import HiddenField, StringField, PasswordField, SubmitField, FloatField, SelectField, IntegerField, SelectMultipleField, DecimalField
 from wtforms.validators import DataRequired, Email, EqualTo, NumberRange, Optional, InputRequired, Regexp
 from flask_wtf.csrf import CSRFProtect
 from app.ebay.constants import MARKETPLACE_IDS
@@ -90,3 +90,6 @@ class TelegramConnectForm(FlaskForm):
 
 class TelegramDisconnectForm(FlaskForm):
     pass  # Only needs CSRF token 
+
+class SubscriptionForm(FlaskForm):
+    tier = StringField('Tier')

@@ -96,3 +96,66 @@ input[type="password"] {
     border-radius: 4px;
     cursor: pointer;
 }
+
+.card {
+    border: none;
+    border-radius: 1rem;
+    transition: all 0.2s;
+    box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+    margin-top: -.25rem;
+    margin-bottom: .25rem;
+    box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.3);
+}
+
+.card-price {
+    font-size: 3rem;
+    margin: 0;
+}
+
+.period {
+    font-size: 0.8rem;
+}
+
+.btn {
+    font-size: 80%;
+    letter-spacing: .1rem;
+    padding: 1rem;
+}
+
+.query-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-pause {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-resume {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.status-btn {
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid;
+    cursor: pointer;
+}
+
+.status-btn.active {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.status-btn.paused {
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+    color: #856404;
+}

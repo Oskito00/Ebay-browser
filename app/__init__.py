@@ -65,6 +65,9 @@ def create_app(config_class=None):
     from app.routes.queries import bp as queries_bp
     app.register_blueprint(queries_bp)
 
+    from app.routes.subscription import bp as subscription_bp
+    app.register_blueprint(subscription_bp)
+
     from app.routes.telegram import bp as telegram_bp
     app.register_blueprint(telegram_bp, url_prefix='/telegram')
         

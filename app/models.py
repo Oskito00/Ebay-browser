@@ -23,7 +23,8 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
-    user_query_usage = db.Column(db.Integer, default=0)
+    query_usage = db.Column(db.Integer, default=0)
+    query_limit = db.Column(db.Integer, default=0)
     
     queries = db.relationship('Query', backref='user', lazy='dynamic')
 

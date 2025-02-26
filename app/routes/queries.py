@@ -177,6 +177,24 @@ def create_query():
         print("Form not validated. Errors:", form.errors)
     return render_template('queries/create.html', form=form) 
 
+@bp.route('/queries/toggle_all', methods=['POST'])
+@login_required
+def toggle_all_queries():
+    new_state = not current_user.queries.filter_by(is_paused=False).count() > 0
+    current_user.queries.update({'is_paused': new_state})
+    db.session.commit()
+    return redirect(url_for('queries.manage_queries'))
+
+@bp.route('/queries/<string:query_id>/toggle', methods=['POST'])
+@login_required
+def toggle_query(query_id):
+    query = Query.query.get_or_404(query_id)
+    if query.user != current_user:
+        abort(403)
+    query.is_paused = not query.is_paused
+    db.session.commit()
+    return redirect(url_for('queries.manage_queries'))
+
 
 #*******************************
 #HELPER FUNCTIONS

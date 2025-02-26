@@ -2,11 +2,20 @@
 
 {% block content %}
 <h1>Your Saved Searches</h1>
-<a href="{{ url_for('queries.create_query') }}" class="button">New Search</a>
+<div class="query-controls">
+    <a href="{{ url_for('queries.create_query') }}" class="button">New Search</a>
+    <form method="POST" action="{{ url_for('queries.toggle_all_queries') }}" style="display: inline-block;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="button {% if all_paused %}btn-resume{% else %}btn-pause{% endif %}">
+            {{ 'Resume All' if all_paused else 'Pause All' }}
+        </button>
+    </form>
+</div>
 
 <table class="queries-table">
     <thead>
         <tr>
+            <th>Status</th>
             <th>Keywords</th>
             <th>Alert Threshold</th>
             <th>Last Checked</th>
@@ -16,6 +25,14 @@
     <tbody>
         {% for query in queries %}
         <tr>
+            <td>
+                <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="status-btn {% if query.is_paused %}paused{% else %}active{% endif %}">
+                        {{ 'Paused' if query.is_paused else 'Active' }}
+                    </button>
+                </form>
+            </td>
             <td>{{ query.keywords }}</td>
             <td>{{ query.price_alert_threshold }}%</td>
             <td>{{ query.last_checked|datetimeformat if query.last_checked else 'Never' }}</td>
@@ -29,7 +46,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="4">No saved searches yet. <a href="{{ url_for('queries.create_query') }}">Create one</a></td>
+            <td colspan="5">No saved searches yet. <a href="{{ url_for('queries.create_query') }}">Create one</a></td>
         </tr>
         {% endfor %}
     </tbody>
