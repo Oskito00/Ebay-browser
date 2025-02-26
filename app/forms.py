@@ -36,7 +36,7 @@ class QueryForm(FlaskForm):
     max_price = DecimalField('Maximum Price', places=2, validators=[Optional()])
     check_interval = IntegerField(
         'Check Every (minutes)', 
-        validators=[InputRequired(), NumberRange(min=1, max=1440)]
+        validators=[InputRequired(), NumberRange(min=5, max=120)]
     )
     required_keywords = StringField('Required Keywords', validators=[Optional()])
     excluded_keywords = StringField('Excluded Keywords', validators=[Optional()])

@@ -1,6 +1,6 @@
 import requests
 from flask import current_app, url_for
-from datetime import datetime
+from datetime import datetime, timezone
 
 class NotificationHandler:
     @staticmethod
@@ -80,7 +80,7 @@ class NotificationManager:
                 user.telegram_chat_id
             )
             print("Trying to send test notification")
-            return notifier.send_message("CIAO CALOJERO CI STO LAVORANDO ADESSO")
+            return notifier.send_message("TESTING TESTING 123...")
         except Exception as e:
             print(f"Error sending test notification: {str(e)}")
             return False
@@ -98,7 +98,7 @@ class NotificationManager:
                 f"💰 Price dropped from £{drop['old_price']} → £{drop['new_price']}\n"
                 f"🔗 [View Item]({drop['item'].url})"
             )
-            if user.notify_price_drops:
+            if user.notification_preferences.get('price_drops', True):
                 notifier.send_message(message, parse_mode='Markdown')
                 
     
@@ -109,7 +109,7 @@ class NotificationManager:
             user.telegram_chat_id
         )
         for item in items:
-            time_left = item.end_time - datetime.utcnow()
+            time_left = item.end_time - datetime.now(timezone.utc)
             hours_left = round(time_left.total_seconds() / 3600, 1)
             message = (
                 "⏳ **Auction Ending Soon**\n"
@@ -118,7 +118,7 @@ class NotificationManager:
                 f"⏰ Ends in: {hours_left} hours\n"
                 f"🔗 [View Item]({item.url})"
             )
-            if user.notify_auction_end:
+            if user.notification_preferences.get('auction_alerts', True):
                 notifier.send_message(message, parse_mode='Markdown')
     
     

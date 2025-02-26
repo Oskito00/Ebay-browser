@@ -100,6 +100,7 @@ class Item(ItemBase):
     
     query_id = db.Column(db.Integer, db.ForeignKey('queries.id'))
     search_query = db.relationship('Query', back_populates='search_items')
+    auction_ending_notification_sent = db.Column(db.Boolean, default=False)
     
     __table_args__ = (
         db.UniqueConstraint('ebay_id', 'query_id', name='uq_ebay_id_query'),
