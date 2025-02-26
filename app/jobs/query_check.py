@@ -161,10 +161,10 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
 
         # Auction ending detection
         end_time = item_data.get('end_time')
-        if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=24) and existing.auction_ending_notification_sent == False:
+        if existing and end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=24) and existing.auction_ending_notification_sent == False:
             ending_auctions.append(existing)
             app.logger.debug(f"[Process Items] Auction ending soon: {end_time} (Item {existing.id if existing else 'new'})")
-            existing.auction_ending_notification_sent = True
+
     try:
         app.logger.debug(f"[Process Items] Committing changes to database")
         app.logger.debug(f"[Process Items] New items: {new_items_count}, Updated items: {len(updated_items)}")

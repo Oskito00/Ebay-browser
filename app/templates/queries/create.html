@@ -2,6 +2,20 @@
 
 {% block content %}
 <h1>Create New Search</h1>
+
+{# Add flash messages section #}
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
 <form method="POST" action="{{ url_for('queries.create_query') }}">
     {{ form.hidden_tag() }}
 

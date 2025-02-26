@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 
 from app.utils.notifications import NotificationManager
 from app.utils.text_helpers import filter_items_by_keywords, filter_items_by_price
+from app.utils.query_helpers import update_user_usage
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -57,6 +58,12 @@ def delete_query(query_id):
         if query.user != current_user:
             current_app.logger.warning(f"Unauthorized delete attempt by {current_user.id}")
             abort(403)
+
+        # Calculate usage impact before deletion
+        try:
+            update_user_usage(current_user, query, 'remove')
+        except Exception as e:
+            flash(f"Usage update failed: {str(e)}", 'warning')
 
         # --- Archive items before deletion ---
         archived_count = 0
@@ -128,6 +135,17 @@ def create_query():
                 item_location=form.item_location.data,
                 user_id=current_user.id
             )
+            
+            # Calculate potential usage
+            try:
+                if not update_user_usage(current_user, query, 'add'):
+                    flash('This query would exceed your daily limit', 'danger')
+                    return render_template('queries/create.html', form=form)
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return render_template('queries/create.html', form=form)
+
+            # Proceed with creation if within limits
             query.needs_scheduling = True
             print("Query object:", query.__dict__)  # Before add
             db.session.add(query)
