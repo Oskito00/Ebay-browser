@@ -4,22 +4,44 @@
     <h1 class="mb-4">Choose Your Plan</h1>
     
     <div class="row">
-        <!-- Free Tier
-        <div class="col-lg-4">
-            <div class="card mb-5 mb-lg-0">
-                <div class="card-body">
-                    <h5 class="card-title text-muted text-uppercase text-center">Free</h5>
-                    <h6 class="card-price text-center">$0<span class="period">/month</span></h6>
-                    <hr>
-                    <ul class="fa-ul">
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>1 Active Search</li>
-                    </ul>
-                    <div class="d-grid">
-                        <a href="#" class="btn btn-primary text-uppercase">Current Plan</a>
-                    </div>
-                </div>
-            </div>
-        </div> -->
+        <div class="current-plan mb-5 p-3 bg-light rounded">
+            <h3>
+                Current Plan: 
+                <span class="badge 
+                    {% if current_user.tier['tier'] == 'free' %}bg-warning
+                    {% elif current_user.tier['tier'] == 'individual' %}bg-primary
+                    {% elif current_user.tier['tier'] == 'business' %}bg-success
+                    {% else %}bg-secondary{% endif %}">
+                    {% if current_user.tier['tier'] == 'free' %}Free
+                    {% elif current_user.tier['tier'] == 'individual' %}Individual
+                    {% elif current_user.tier['tier'] == 'business' %}Business
+                    {% else %}Custom{% endif %}
+                </span>
+            </h3>
+            <p>
+                {% if current_user.auto_renew %}
+                    Renews on:
+                {% else %}
+                    Expires on:
+                {% endif %}
+                <strong>
+                    {% if current_user.subscription_valid_until %}
+                        {{ current_user.subscription_valid_until.strftime('%Y-%m-%d') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </strong>
+            </p>
+            {% if current_user.requested_change %}
+                <p>
+                    You have requested to change to the {{ current_user.requested_change['tier'] }} tier. Your subscription will be updated {{ current_user.subscription_valid_until.strftime('%Y-%m-%d')}}
+                </p>
+                <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="btn btn-primary text-uppercase" name="action" value="cancel_requested_change">Do you want to cancel this change?</button>
+                </form>
+            {% endif %}
+        </div>
         
         <!-- Individual Tier -->
         <div class="col-lg-4">
@@ -32,18 +54,33 @@
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>5+ Active Searches</li>
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>1500 API Calls per day</li>
                     </ul>
-                    <form method="POST" action="{{ url_for('subscription.create_subscription') }}">
+                    <form method="POST" id="subscriptionActionForm" action="{{ url_for('subscription.handle_actions') }}">
                         {{ form.hidden_tag() }}
                         <input type="hidden" name="tier" value="individual">
+                        <input type="hidden" id="when" name="when" value="">
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary text-uppercase">Choose Plan</button>
+                            {% if current_user.tier['query_limit'] == 0 %}
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('now')">Upgrade to this plan</button>
+                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 1500 %}
+                            <button type="submit" 
+                            class="btn btn-primary"
+                            onclick="return confirm('Apply changes now? (Cancel to apply at renewal)')"
+                            name="when" 
+                            value="{{ 'now' if confirmed else 'renewal' }}">
+                            Change to this plan
+                            </button>
+                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 1500 %}
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('next_renewal')">Change to this plan</button>
+                            {% else %}
+                                <h6 class="text-center">You are already on this plan</h6>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
             </div>
         </div>
         
-        <!-- Company Tier -->
+        <!-- Business Tier -->
         <div class="col-lg-4">
             <div class="card">
                 <div class="card-body">
@@ -52,18 +89,67 @@
                     <hr>
                     <ul class="fa-ul">
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>15+ Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>5000 API Calls per day</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls per day</li>
                     </ul>
-                    <form method="POST" action="{{ url_for('subscription.create_subscription') }}">
+                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
                         {{ form.hidden_tag() }}
-                        <input type="hidden" name="tier" value="company">
+                        <input type="hidden" name="tier" value="business">
+                        <input type="hidden" id="whenBusiness" name="when" value="">
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-success text-uppercase">Choose Plan</button>
+                            {% if current_user.tier['query_limit'] == 0 %}
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('now')">Upgrade to this plan</button>
+                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 4000 %}
+                            <button type="submit" 
+                            class="btn btn-primary"
+                            name="action"
+                            value="upgrade_subscription"
+                            onclick="return handleUpgrade()">
+                            Change to this plan
+                            </button>
+                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 4000 %}
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('next_renewal')">Change to this plan</button>
+                            {% else %}
+                                <h6 class="text-center">You are already on this plan</h6>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+
+        <!-- Cancel Subscription -->
+        {% if current_user.requested_change['tier'] != 'free' and current_user.tier['tier'] != 'free' %}
+        <div class="col-lg-4">
+            <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+                {{ form.hidden_tag() }}
+                <input type="hidden" id="whenCancel" name="when" value="">
+                <input type="hidden" name="tier" value="free">
+                <button type="submit" class="btn btn-primary text-uppercase" onclick="setWhenParam('now')" name="action" value="downgrade_subscription">Cancel Your Subscription</button>
+            </form>
+        </div>
+        {% endif %}
     </div>
+
 </div>
+
+<script>
+    function handleUpgrade() {
+        console.log('Function called'); // Add this
+        const applyNow = confirm('Would you like to upgrade now or at renewal?');
+        console.log('User chose:', applyNow);
+        const whenInput = document.getElementById('whenBusiness');
+        console.log('Input element:', whenInput);
+        whenInput.value = applyNow ? 'now' : 'renewal';
+        console.log('Set value to:', whenInput.value);
+        return true;
+    }
+    </script>
+
+<script>
+    function setWhenParam(value) {
+        document.getElementById('when').value = value;
+        document.getElementById('subscriptionActionForm').submit();
+    }
+    </script>
 {% endblock %}
+

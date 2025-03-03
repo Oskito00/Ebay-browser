@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from app.utils.notifications import NotificationManager
 from app.utils.text_helpers import filter_items_by_keywords, filter_items_by_price
-from app.utils.query_helpers import update_user_usage
+from app.utils.query_helpers import update_user_usage, calculate_daily_runs
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
 
@@ -25,8 +25,11 @@ def manage_queries():
     print("Current user:", current_user)
     queries = current_user.queries.all()
     print("Queries found:", queries)
+    total_queries = len(queries)
+    active_queries = len([query for query in queries if query.is_active])
+    all_active = active_queries == total_queries
     delete_form = DeleteForm()
-    return render_template('queries/manage.html', queries=queries, delete_form=delete_form)
+    return render_template('queries/manage.html', queries=queries, delete_form=delete_form, all_active=all_active)
 
 @bp.route('/<string:query_id>', methods=['GET', 'POST'])
 @login_required #TODO: Edit query button is not calling this function/ generally not working
@@ -61,7 +64,8 @@ def delete_query(query_id):
 
         # Calculate usage impact before deletion
         try:
-            update_user_usage(current_user, query, 'remove')
+            if query.is_active:
+                update_user_usage(current_user, query, 'remove')
         except Exception as e:
             flash(f"Usage update failed: {str(e)}", 'warning')
 
@@ -133,7 +137,8 @@ def create_query():
                 condition=form.condition.data,
                 buying_options=form.buying_options.data,
                 item_location=form.item_location.data,
-                user_id=current_user.id
+                user_id=current_user.id,
+                is_active=True
             )
             
             # Calculate potential usage
@@ -180,8 +185,17 @@ def create_query():
 @bp.route('/queries/toggle_all', methods=['POST'])
 @login_required
 def toggle_all_queries():
-    new_state = not current_user.queries.filter_by(is_paused=False).count() > 0
-    current_user.queries.update({'is_paused': new_state})
+    new_state = not current_user.queries.filter_by(is_active=True).count() > 0
+    for query in current_user.queries:
+        if query.is_active != new_state:
+            operation = 'add' if new_state else 'remove'
+            try:
+                update_user_usage(current_user, query, operation)
+                query.is_active = new_state
+            except ValueError as e:
+                db.session.rollback()
+                flash(str(e), 'danger')
+                return redirect(url_for('queries.manage_queries'))
     db.session.commit()
     return redirect(url_for('queries.manage_queries'))
 
@@ -191,8 +205,16 @@ def toggle_query(query_id):
     query = Query.query.get_or_404(query_id)
     if query.user != current_user:
         abort(403)
-    query.is_paused = not query.is_paused
-    db.session.commit()
+    
+    operation = 'remove' if query.is_active else 'add'
+    try:
+        update_user_usage(current_user, query, operation)
+        query.is_active = not query.is_active
+        db.session.commit()
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return redirect(url_for('queries.manage_queries'))
+    
     return redirect(url_for('queries.manage_queries'))
 
 

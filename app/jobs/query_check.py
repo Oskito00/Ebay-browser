@@ -208,7 +208,6 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
         db.session.rollback()
         raise
 
-
 def check_queries():
     app = scheduler.flask_app
     with app.app_context():

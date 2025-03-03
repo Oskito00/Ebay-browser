@@ -1,6 +1,7 @@
 import pytest
 from app import create_app, db
 from app.models import User
+from datetime import datetime, timedelta, timezone
 
 # Fixture: Create a Flask app for testing
 @pytest.fixture(scope='module')
@@ -33,5 +34,4 @@ def test_user(app):
         user = User(email='test@example.com')
         db.session.add(user)
         db.session.commit()
-        return user
-    
+        return user.id

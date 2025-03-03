@@ -27,8 +27,6 @@ def add_query_jobs(query_id):
         id=f'query_{query_id}_recent'
     )
     
-    
-
 def remove_query_jobs(query_id):
     try:
         scheduler.remove_job(f'query_{query_id}_recent')

@@ -91,5 +91,8 @@ class TelegramConnectForm(FlaskForm):
 class TelegramDisconnectForm(FlaskForm):
     pass  # Only needs CSRF token 
 
-class SubscriptionForm(FlaskForm):
-    tier = StringField('Tier')
+class SubscriptionActionForm(FlaskForm):
+    tier = StringField('tier')
+    action = StringField('action')
+    submit = SubmitField('Submit')
+    when = StringField('when')

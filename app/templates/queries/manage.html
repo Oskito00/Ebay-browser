@@ -6,8 +6,8 @@
     <a href="{{ url_for('queries.create_query') }}" class="button">New Search</a>
     <form method="POST" action="{{ url_for('queries.toggle_all_queries') }}" style="display: inline-block;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <button type="submit" class="button {% if all_paused %}btn-resume{% else %}btn-pause{% endif %}">
-            {{ 'Resume All' if all_paused else 'Pause All' }}
+        <button type="submit" class="button {% if all_active %}btn-pause{% else %}btn-resume{% endif %}">
+            {{ 'Pause All' if all_active else 'Resume All' }}
         </button>
     </form>
 </div>
@@ -28,8 +28,8 @@
             <td>
                 <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.id) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="status-btn {% if query.is_paused %}paused{% else %}active{% endif %}">
-                        {{ 'Paused' if query.is_paused else 'Active' }}
+                    <button type="submit" class="status-btn {% if query.is_active %}active{% else %}paused{% endif %}">
+                        {{ 'Active' if query.is_active else 'Paused' }}
                     </button>
                 </form>
             </td>

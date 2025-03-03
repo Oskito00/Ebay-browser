@@ -8,7 +8,7 @@ from sqlalchemy import DateTime
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
@@ -23,9 +23,14 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+
+    #Subscription
+    tier = db.Column(db.JSON, default={'tier': 'free', 'query_limit': 0})
+    subscription_valid_until = db.Column(db.DateTime)
+    auto_renew = db.Column(db.Boolean, default=True)
+    requested_change = db.Column(db.JSON)
     query_usage = db.Column(db.Integer, default=0)
-    query_limit = db.Column(db.Integer, default=0)
-    
+
     queries = db.relationship('Query', backref='user', lazy='dynamic')
 
     def get_id(self):

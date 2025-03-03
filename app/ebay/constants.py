@@ -6,6 +6,12 @@ CONDITION_IDS = {
     'seller_refurbished': '2500'
 }
 
+TIER_LIMITS = {
+    'free': 0,
+    'individual': 1500,
+    'business': 4000
+}
+
 MARKETPLACE_IDS = {
     'EBAY_GB': {
         'code': 'EBAY_GB',

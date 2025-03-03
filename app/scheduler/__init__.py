@@ -1,5 +1,6 @@
 from flask import current_app
 
+from app.jobs.check_user_subscriptions import check_subscriptions
 from app.jobs.query_check import check_queries
 from .core import scheduler
 from app.models import Query
@@ -12,5 +13,13 @@ def init_scheduler(flask_app):
         'interval',
         seconds=30,
         id='query_check',
+        replace_existing=True
+    )
+
+    scheduler.add_job(
+        check_subscriptions,
+        'interval',
+        hours=24,
+        id='subscription_check',
         replace_existing=True
     )
