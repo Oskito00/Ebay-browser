@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, render_template, request, flash, redirect, url_for, abort
+from flask import Blueprint, current_app, render_template, request, flash, redirect, url_for, abort
 from flask_login import current_user, login_required
 import stripe
 from app.ebay.constants import TIER_LIMITS
@@ -39,6 +39,10 @@ def handle_actions():
 
 def upgrade_subscription(new_tier, when):
     print(f"Upgrading to {new_tier} at {when}")
+    if not create_customer():
+        flash('Failed to initialize payment profile', 'danger')
+        return redirect(url_for('subscription.buy_subscription'))
+    
     if when == 'now':
         current_user.subscription_valid_until = datetime.now(timezone.utc) + timedelta(days=30)
         current_user.auto_renew = True
@@ -74,5 +78,61 @@ def cancel_requested_change():
 #**********
 # Stripe Integration
 #**********
+
+import stripe
+
+@bp.before_request
+def configure_stripe():
+    stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+
+def create_customer(user):
+    """
+    Creates a Stripe customer and associates it with the current user
+    Returns:
+        bool: True if customer created/exists, False on error
+    """
+    try:
+        # Check if customer already exists
+        if user.stripe_customer_id:
+            print(f"Customer already exists: {user.stripe_customer_id}")
+            current_app.logger.info(f"Customer already exists: {user.stripe_customer_id}")
+            return True
+            
+        # Create customer in Stripe
+        print(f"Creating customer for {user.email}")
+        customer = stripe.Customer.create(
+            email=user.email,
+            metadata={
+                'user_id': user.id,
+                'app_tier': user.tier['tier']
+            }
+        )
+        print(customer)
+        print(f"Created customer: {customer.id}")
+
+        # Update database
+        print(f"Updating the stripe customer id for user {user.id}")
+        user.stripe_customer_id = customer.id
+        db.session.commit()
+        
+        print(f"Created Stripe customer {customer.id} for user {user.id}")
+        return True
+        
+    except stripe.error.StripeError as e:
+        current_app.logger.error(f"Stripe error creating customer: {str(e)}")
+        db.session.rollback()
+        return False
+        
+    except Exception as e:
+        current_app.logger.error(f"System error creating customer: {str(e)}")
+        db.session.rollback()
+        return False
+
+
+
+
+
+
+
 
 

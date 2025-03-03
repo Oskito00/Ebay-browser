@@ -31,6 +31,9 @@ class User(UserMixin, db.Model):
     requested_change = db.Column(db.JSON)
     query_usage = db.Column(db.Integer, default=0)
 
+    # Stripe
+    stripe_customer_id = db.Column(db.String(120))
+
     queries = db.relationship('Query', backref='user', lazy='dynamic')
 
     def get_id(self):
