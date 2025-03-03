@@ -54,23 +54,19 @@
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>5+ Active Searches</li>
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>1500 API Calls per day</li>
                     </ul>
-                    <form method="POST" id="subscriptionActionForm" action="{{ url_for('subscription.handle_actions') }}">
+                    <form method="POST" id="individualActionForm" action="{{ url_for('subscription.handle_actions') }}">
                         {{ form.hidden_tag() }}
                         <input type="hidden" name="tier" value="individual">
-                        <input type="hidden" id="when" name="when" value="">
+                        <input type="hidden" id="whenIndividual" name="when" value="">
+                        <!-- TODO: Add an if, if requested change, user cannot request again... -->
                         <div class="d-grid">
                             {% if current_user.tier['query_limit'] == 0 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('now')">Upgrade to this plan</button>
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'now')">Upgrade to this plan</button>
                             {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 1500 %}
-                            <button type="submit" 
-                            class="btn btn-primary"
-                            onclick="return confirm('Apply changes now? (Cancel to apply at renewal)')"
-                            name="when" 
-                            value="{{ 'now' if confirmed else 'renewal' }}">
-                            Change to this plan
-                            </button>
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'now')">Upgrade now to this plan (Immediate Payment)</button>
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'next_renewal')">Upgrade to this plan when your current plan expires</button>
                             {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 1500 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('next_renewal')">Change to this plan</button>
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('individualActionForm', 'next_renewal')">Change to this plan</button>
                             {% else %}
                                 <h6 class="text-center">You are already on this plan</h6>
                             {% endif %}
@@ -91,23 +87,20 @@
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>15+ Active Searches</li>
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls per day</li>
                     </ul>
-                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+                    <form method="POST" id="businessActionForm" action="{{ url_for('subscription.handle_actions') }}">
                         {{ form.hidden_tag() }}
                         <input type="hidden" name="tier" value="business">
                         <input type="hidden" id="whenBusiness" name="when" value="">
+                        <!-- TODO: Add an if, if requested change, user cannot request again... -->
                         <div class="d-grid">
                             {% if current_user.tier['query_limit'] == 0 %}
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('now')">Upgrade to this plan</button>
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'now')">Upgrade to this plan</button>
                             {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 4000 %}
-                            <button type="submit" 
-                            class="btn btn-primary"
-                            name="action"
-                            value="upgrade_subscription"
-                            onclick="return handleUpgrade()">
-                            Change to this plan
-                            </button>
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'now')">Upgrade now to this plan (Immediate Payment)</button>
+                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'next_renewal')">Upgrade to this plan when your current plan expires</button>                                
+                            </div>
                             {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 4000 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('next_renewal')">Change to this plan</button>
+                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('businessActionForm', 'next_renewal')">Change to this plan</button>
                             {% else %}
                                 <h6 class="text-center">You are already on this plan</h6>
                             {% endif %}
@@ -120,11 +113,11 @@
         <!-- Cancel Subscription -->
         {% if current_user.requested_change['tier'] != 'free' and current_user.tier['tier'] != 'free' %}
         <div class="col-lg-4">
-            <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+            <form method="POST" id="cancelActionForm" action="{{ url_for('subscription.handle_actions') }}">
                 {{ form.hidden_tag() }}
                 <input type="hidden" id="whenCancel" name="when" value="">
                 <input type="hidden" name="tier" value="free">
-                <button type="submit" class="btn btn-primary text-uppercase" onclick="setWhenParam('now')" name="action" value="downgrade_subscription">Cancel Your Subscription</button>
+                <button type="submit" class="btn btn-primary text-uppercase" onclick="setWhenParam('cancelActionForm', 'now')" name="action" value="downgrade_subscription">Cancel Your Subscription</button>
             </form>
         </div>
         {% endif %}
@@ -133,23 +126,13 @@
 </div>
 
 <script>
-    function handleUpgrade() {
-        console.log('Function called'); // Add this
-        const applyNow = confirm('Would you like to upgrade now or at renewal?');
-        console.log('User chose:', applyNow);
-        const whenInput = document.getElementById('whenBusiness');
-        console.log('Input element:', whenInput);
-        whenInput.value = applyNow ? 'now' : 'renewal';
-        console.log('Set value to:', whenInput.value);
-        return true;
+    function setWhenParam(formId, value) {
+        const form = document.getElementById(formId);
+        const whenInput = form.querySelector('input[name="when"]');
+        whenInput.value = value;
+        form.submit();
     }
     </script>
 
-<script>
-    function setWhenParam(value) {
-        document.getElementById('when').value = value;
-        document.getElementById('subscriptionActionForm').submit();
-    }
-    </script>
 {% endblock %}
 
