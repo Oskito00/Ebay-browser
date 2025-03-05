@@ -4,7 +4,7 @@ from app.extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.dialects.postgresql import NUMERIC
-from sqlalchemy import DateTime
+from sqlalchemy import JSON, DateTime
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -24,15 +24,16 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
 
-    #Subscription
-    tier = db.Column(db.JSON, default={'tier': 'free', 'query_limit': 0})
-    subscription_valid_until = db.Column(db.DateTime)
-    auto_renew = db.Column(db.Boolean, default=True)
-    requested_change = db.Column(db.JSON)
     query_usage = db.Column(db.Integer, default=0)
 
-    # Stripe
-    stripe_customer_id = db.Column(db.String(120))
+    # Stripe Subscription
+    stripe_customer_id = db.Column(db.String(50), index=True)
+    tier = db.Column(JSON, default={'name': 'free', 'query_limit': 0})
+    subscription_status = db.Column(db.String(20), default='inactive')  # active/past_due/canceled/expired
+    current_period_end = db.Column(db.DateTime)
+    requested_change = db.Column(JSON)  # {'new_tier': 'pro', 'when': 'now|renewal'}
+    cancellation_requested = db.Column(db.Boolean, default=False)
+
 
     queries = db.relationship('Query', backref='user', lazy='dynamic')
 

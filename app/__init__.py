@@ -9,6 +9,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import os
 from app.scheduler import init_scheduler
+from app.routes.subscription import stripe_webhook
+
 
 
 csrf = CSRFProtect()
@@ -39,6 +41,7 @@ def create_app(config_class=None):
     # Initialize CSRF after app creation
     csrf.init_app(app)  # Now 'app' exists
     
+    
     # Initialize other extensions
     db.init_app(app)
 
@@ -67,6 +70,7 @@ def create_app(config_class=None):
 
     from app.routes.subscription import bp as subscription_bp
     app.register_blueprint(subscription_bp)
+    csrf.exempt(stripe_webhook)
 
     from app.routes.telegram import bp as telegram_bp
     app.register_blueprint(telegram_bp, url_prefix='/telegram')

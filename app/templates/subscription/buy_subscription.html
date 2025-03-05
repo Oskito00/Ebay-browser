@@ -8,39 +8,30 @@
             <h3>
                 Current Plan: 
                 <span class="badge 
-                    {% if current_user.tier['tier'] == 'free' %}bg-warning
-                    {% elif current_user.tier['tier'] == 'individual' %}bg-primary
-                    {% elif current_user.tier['tier'] == 'business' %}bg-success
+                    {% if current_user.tier['name'] == 'free' %}bg-warning
+                    {% elif current_user.tier['name'] == 'individual' %}bg-primary
+                    {% elif current_user.tier['name'] == 'business' %}bg-success
                     {% else %}bg-secondary{% endif %}">
-                    {% if current_user.tier['tier'] == 'free' %}Free
-                    {% elif current_user.tier['tier'] == 'individual' %}Individual
-                    {% elif current_user.tier['tier'] == 'business' %}Business
+                    {% if current_user.tier['name'] == 'free' %}Free
+                    {% elif current_user.tier['name'] == 'individual' %}Individual
+                    {% elif current_user.tier['name'] == 'business' %}Business
                     {% else %}Custom{% endif %}
                 </span>
             </h3>
             <p>
-                {% if current_user.auto_renew %}
+                {% if current_user.cancellation_requested == False %}
                     Renews on:
                 {% else %}
-                    Expires on:
+                    Ending on:
                 {% endif %}
                 <strong>
-                    {% if current_user.subscription_valid_until %}
-                        {{ current_user.subscription_valid_until.strftime('%Y-%m-%d') }}
+                    {% if current_user.current_period_end %}
+                        {{ current_user.current_period_end.strftime('%Y-%m-%d') }}
                     {% else %}
                         N/A
                     {% endif %}
                 </strong>
             </p>
-            {% if current_user.requested_change %}
-                <p>
-                    You have requested to change to the {{ current_user.requested_change['tier'] }} tier. Your subscription will be updated {{ current_user.subscription_valid_until.strftime('%Y-%m-%d')}}
-                </p>
-                <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
-                    {{ form.hidden_tag() }}
-                    <button type="submit" class="btn btn-primary text-uppercase" name="action" value="cancel_requested_change">Do you want to cancel this change?</button>
-                </form>
-            {% endif %}
         </div>
         
         <!-- Individual Tier -->
@@ -54,55 +45,23 @@
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>5+ Active Searches</li>
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>1500 API Calls per day</li>
                     </ul>
-                    <form method="POST" id="individualActionForm" action="{{ url_for('subscription.handle_actions') }}">
-                        {{ form.hidden_tag() }}
+                    <form method="POST" action="{{ url_for('subscription.create_checkout_session') }}">
+                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_INDIVIDUAL }}">
                         <input type="hidden" name="tier" value="individual">
-                        <input type="hidden" id="whenIndividual" name="when" value="">
-                        <!-- TODO: Add an if, if requested change, user cannot request again... -->
-                        <div class="d-grid">
-                            {% if current_user.tier['query_limit'] == 0 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'now')">Upgrade to this plan</button>
-                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 1500 %}
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'now')">Upgrade now to this plan (Immediate Payment)</button>
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('individualActionForm', 'next_renewal')">Upgrade to this plan when your current plan expires</button>
-                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 1500 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('individualActionForm', 'next_renewal')">Change to this plan</button>
-                            {% else %}
-                                <h6 class="text-center">You are already on this plan</h6>
-                            {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Business Tier -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title text-success text-uppercase text-center">Business</h5>
-                    <h6 class="card-price text-center">£49.99<span class="period">/month</span></h6>
-                    <hr>
-                    <ul class="fa-ul">
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>15+ Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls per day</li>
-                    </ul>
-                    <form method="POST" id="businessActionForm" action="{{ url_for('subscription.handle_actions') }}">
                         {{ form.hidden_tag() }}
-                        <input type="hidden" name="tier" value="business">
-                        <input type="hidden" id="whenBusiness" name="when" value="">
-                        <!-- TODO: Add an if, if requested change, user cannot request again... -->
                         <div class="d-grid">
                             {% if current_user.tier['query_limit'] == 0 %}
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'now')">Upgrade to this plan</button>
-                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] < 4000 %}
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'now')">Upgrade now to this plan (Immediate Payment)</button>
-                            <button type="submit" class="btn btn-primary text-uppercase" name="action" value="upgrade_subscription" onclick="setWhenParam('businessActionForm', 'next_renewal')">Upgrade to this plan when your current plan expires</button>                                
-                            </div>
-                            {% elif current_user.tier['tier'] != 'free' and current_user.tier['query_limit'] > 4000 %}
-                                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="downgrade_subscription" onclick="setWhenParam('businessActionForm', 'next_renewal')">Change to this plan</button>
-                            {% else %}
-                                <h6 class="text-center">You are already on this plan</h6>
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    onclick="handleUpgradeClick('individual')"
+                                >
+                                    {% if current_user.requested_change and current_user.requested_change['tier'] == 'individual' %}
+                                        Upgrade Pending
+                                    {% else %}
+                                        Upgrade Now
+                                    {% endif %}
+                                </button>
                             {% endif %}
                         </div>
                     </form>
@@ -110,16 +69,54 @@
             </div>
         </div>
 
+        <div class="col-lg-4"></div>
+            <div class="card mb-5 mb-lg-0">
+                <div class="card-body">
+                    <h5 class="card-title text-primary text-uppercase text-center">Business</h5>
+                    <h6 class="card-price text-center">£49.99<span class="period">/month</span></h6>
+                    <hr>
+                    <ul class="fa-ul">
+
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>>15 Active Searches</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls per day</li>
+                    </ul>
+                    <form method="POST" action="{{ url_for('subscription.create_checkout_session') }}">
+                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_BUSINESS }}">
+                        <input type="hidden" name="tier" value="business">
+                        {{ form.hidden_tag() }}
+                        <div class="d-grid">
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    onclick="handleUpgradeClick('business')"
+                                >
+                                    Upgrade to this plan
+                                </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+
         <!-- Cancel Subscription -->
-        {% if current_user.requested_change['tier'] != 'free' and current_user.tier['tier'] != 'free' %}
+        {% if current_user.cancellation_requested == False and current_user.tier['name'] != 'free' %}
         <div class="col-lg-4">
-            <form method="POST" id="cancelActionForm" action="{{ url_for('subscription.handle_actions') }}">
+            <form method="POST" action="{{ url_for('subscription.cancel_subscription') }}">
                 {{ form.hidden_tag() }}
                 <input type="hidden" id="whenCancel" name="when" value="">
                 <input type="hidden" name="tier" value="free">
-                <button type="submit" class="btn btn-primary text-uppercase" onclick="setWhenParam('cancelActionForm', 'now')" name="action" value="downgrade_subscription">Cancel Your Subscription</button>
+                <button type="submit" class="btn btn-primary text-uppercase">Cancel Your Subscription</button>
             </form>
-        </div>
+            </div>
+        {% elif current_user.cancellation_requested == True and current_user.tier['name'] != 'free' %}
+            <div class="col-lg-4">
+                <h3>You have requested to cancel your subscription, it will end on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
+                <form method="POST" action="{{ url_for('subscription.resume_subscription') }}">
+                    {{ form.hidden_tag() }}
+                    <button type="submit" class="btn btn-primary text-uppercase">Resume Your Subscription</button>
+                </form>
+            </div>
         {% endif %}
     </div>
 

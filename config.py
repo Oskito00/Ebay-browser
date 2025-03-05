@@ -8,7 +8,7 @@ load_dotenv()  # Load .env file
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'another-fallback-key')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL','sqlite:///app.db')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL','sqlite:///instance/app.db')
     TIMEZONE = os.getenv('TIMEZONE', 'Europe/London')
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -28,6 +28,13 @@ class Config:
     }
     LOG_LEVEL = 'INFO'
     TESTING = False
+
+    #Stripe
+    STRIPE_PRICE_INDIVIDUAL = os.getenv('STRIPE_PRICE_INDIVIDUAL')
+    STRIPE_PRICE_BUSINESS = os.getenv('STRIPE_PRICE_BUSINESS')
+    STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+    STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
+    STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
 
     @classmethod
     def verify(cls):

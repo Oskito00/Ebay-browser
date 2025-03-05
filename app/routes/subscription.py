@@ -1,138 +1,221 @@
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, current_app, render_template, request, flash, redirect, url_for, abort
+import os
+from flask import Blueprint, current_app, jsonify, render_template, request, flash, redirect, session, url_for, abort
 from flask_login import current_user, login_required
 import stripe
-from app.ebay.constants import TIER_LIMITS
 from app.forms import SubscriptionActionForm
-from app.models import db
+from app.utils.stripe_helpers import handle_invoice_paid, handle_subscription_deleted, handle_subscription_updated
+from app.models import User
+from app.extensions import db
+from flask_wtf.csrf import CSRFProtect
 
-bp = Blueprint('subscription', __name__)
+csrf = CSRFProtect()
+bp = Blueprint('subscription', __name__, url_prefix='/subscription')
+
 
 @bp.route('/buy_subscription', methods=['GET', 'POST'])
 def buy_subscription():
     form = SubscriptionActionForm()
     return render_template('subscription/buy_subscription.html', form=form)
 
-@bp.route('/handle_actions', methods=['POST'])
-@login_required
-def handle_actions():
-    print("User pressed button")
-    form = SubscriptionActionForm()
-    if not form.validate_on_submit():
-        flash('Invalid form submission', 'danger')
-        return redirect(url_for('subscription.buy_subscription'))
-    
-    action = form.action.data
-    tier = form.tier.data
-    when = form.when.data
-    print(f"Action: {action}, Tier: {tier}, When: {when}")
-
-    if action == 'cancel_subscription':
-        downgrade_subscription('free')
-    elif action == 'upgrade_subscription':
-        upgrade_subscription(tier, when)
-    elif action == 'downgrade_subscription':
-        downgrade_subscription(tier)
-    elif action == 'cancel_requested_change':
-        cancel_requested_change()
-    return redirect(url_for('subscription.buy_subscription'))
-
-def upgrade_subscription(new_tier, when):
-    print(f"Upgrading to {new_tier} at {when}")
-    if not create_customer():
-        flash('Failed to initialize payment profile', 'danger')
-        return redirect(url_for('subscription.buy_subscription'))
-    
-    if when == 'now':
-        current_user.subscription_valid_until = datetime.now(timezone.utc) + timedelta(days=30)
-        current_user.auto_renew = True
-        current_user.tier = {'tier': new_tier, 'query_limit': TIER_LIMITS[new_tier]}
-        db.session.commit()
-        flash(f'{new_tier.capitalize()} subscription activated!', 'success')
-        return redirect(url_for('main.index'))
-    elif when == 'next_renewal':
-        print(f"User requested to change to {new_tier} at next renewal")
-        current_user.requested_change = {'tier': new_tier, 'query_limit': TIER_LIMITS[new_tier]}
-        db.session.commit()
-        flash(f'Subscription upgrade requested!', 'success')
-        return redirect(url_for('subscription.buy_subscription'))
-    
-def downgrade_subscription(new_tier):
-    print(f"Downgrading to {new_tier}")
-    print(f"Requested change: {current_user.requested_change}")
-    if current_user.requested_change == {'tier': 'free', 'query_limit': 0}:
-        current_user.auto_renew = False
-    else:
-        current_user.requested_change = {'tier': new_tier, 'query_limit': TIER_LIMITS[new_tier]}
-    db.session.commit()
-    flash(f'Subscription downgrade requested!', 'success')
-    return redirect(url_for('subscription.buy_subscription'))
-
-def cancel_requested_change():
-    print("Cancelling requested change")
-    current_user.requested_change = None
-    db.session.commit()
-    flash('Requested change cancelled!', 'success')
-    return redirect(url_for('subscription.buy_subscription'))
-
 #**********
 # Stripe Integration
 #**********
-
-import stripe
 
 @bp.before_request
 def configure_stripe():
     stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
 
-def create_customer(user):
+@bp.route('/stripe-webhook', methods=['POST'])
+@csrf.exempt  # Add this decorator
+def stripe_webhook():
+    print("Stripe webhook called")
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+    webhook_secret = current_app.config['STRIPE_WEBHOOK_SECRET']
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, webhook_secret
+        )
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except stripe.error.SignatureVerificationError as e:
+        return jsonify({'error': 'Invalid signature'}), 400
+
+    # Handle specific events
+    if event['type'] == 'invoice.paid':
+        handle_invoice_paid(event)
+    elif event['type'] == 'customer.subscription.updated':
+        handle_subscription_updated(event)
+    elif event['type'] == 'customer.subscription.deleted':
+        print("Subscription deleted event received")
+        handle_subscription_deleted(event)
+    
+    return jsonify({'status': 'success'}), 200
+
+@bp.route('/create_checkout_session', methods=['POST'])
+@login_required
+def create_checkout_session():
     """
-    Creates a Stripe customer and associates it with the current user
-    Returns:
-        bool: True if customer created/exists, False on error
+    Creates a Stripe Checkout Session and redirects user to Stripe's payment page
+    Flow:
+    1. Validate price ID from request
+    2. Create or retrieve Stripe customer
+    3. Create Checkout Session
+    4. Redirect to Stripe-hosted payment page
     """
     try:
-        # Check if customer already exists
-        if user.stripe_customer_id:
-            print(f"Customer already exists: {user.stripe_customer_id}")
-            current_app.logger.info(f"Customer already exists: {user.stripe_customer_id}")
-            return True
-            
-        # Create customer in Stripe
-        print(f"Creating customer for {user.email}")
-        customer = stripe.Customer.create(
-            email=user.email,
-            metadata={
-                'user_id': user.id,
-                'app_tier': user.tier['tier']
+        current_app.logger.info("Create checkout session called")  # Add this
+        print("Creating checkout session")
+        # 1. Validate Inputs
+        price_id = request.form.get('price_id')
+        tier = request.form.get('tier', 'individual')
+        
+        if not price_id or price_id != current_app.config['STRIPE_PRICE_INDIVIDUAL']:
+            flash('Invalid subscription plan', 'danger')
+            return redirect(url_for('subscription.buy_subscription'))
+
+        # 2. Ensure Customer Exists
+        if not current_user.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=current_user.email,
+                metadata={'user_id': current_user.id}
+            )
+            current_user.stripe_customer_id = customer.id
+            db.session.commit()
+
+        # 3. Create Checkout Session
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price': price_id,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=url_for('subscription.payment_success', _external=True),
+            cancel_url=url_for('subscription.payment_cancel', _external=True),
+            customer=current_user.stripe_customer_id,
+            subscription_data={
+                'metadata': {
+                    'user_id': current_user.id,
+                    'tier': tier
+                }
             }
         )
-        print(customer)
-        print(f"Created customer: {customer.id}")
 
-        # Update database
-        print(f"Updating the stripe customer id for user {user.id}")
-        user.stripe_customer_id = customer.id
-        db.session.commit()
-        
-        print(f"Created Stripe customer {customer.id} for user {user.id}")
-        return True
-        
+        # 4. Redirect to Stripe
+        return redirect(session.url)
+
     except stripe.error.StripeError as e:
-        current_app.logger.error(f"Stripe error creating customer: {str(e)}")
-        db.session.rollback()
-        return False
+        current_app.logger.error(f"Stripe error: {str(e)}")
+        flash('Payment processing error. Please try again.', 'danger')
+        return redirect(url_for('subscription.buy_subscription'))
         
     except Exception as e:
-        current_app.logger.error(f"System error creating customer: {str(e)}")
-        db.session.rollback()
-        return False
+        current_app.logger.critical(f"System error: {str(e)}")
+        flash('An unexpected error occurred. Contact support.', 'danger')
+        return redirect(url_for('main.index'))
+
+@bp.route('/cancel_subscription', methods=['POST'])
+@login_required
+@csrf.exempt
+def cancel_subscription():
+    try:
+        cancel_subscription_logic(current_user)
+        flash('Subscription will cancel at period end', 'info')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('subscription.buy_subscription'))
+
+@bp.route('/resume_subscription', methods=['POST'])
+@login_required
+def resume_subscription():
+    try:
+        resume_subscription_logic(current_user)
+        flash('Subscription resumed', 'success')
+    except ValueError as e:
+        flash(str(e), 'warning')
+    return redirect(url_for('subscription.buy_subscription'))
+
+@bp.route('/change-plan', methods=['POST'])
+@login_required
+def change_plan():
+    new_price_id = request.form.get('price_id')
+    
+    # Get current subscription
+    subscriptions = stripe.Subscription.list(
+        customer=current_user.stripe_customer_id,
+        status='active'
+    )
+    
+    if not subscriptions.data:
+        flash('No active subscription', 'warning')
+        return redirect(url_for('subscription.manage'))
+    
+    # Update subscription
+    stripe.Subscription.modify(
+        subscriptions.data[0].id,
+        items=[{
+            'id': subscriptions.data[0].items.data[0].id,
+            'price': new_price_id
+        }],
+        proration_behavior='always_invoice'
+    )
+    
+    flash('Plan updated successfully', 'success')
+    return redirect(url_for('subscription.manage'))
+
+@bp.route('/payment/success')
+def payment_success():
+    return render_template('subscription/payment_success.html')
+
+@bp.route('/payment/cancel')
+def payment_cancel():
+    return render_template('subscription/payment_cancel.html')
 
 
+#**********
+# Helper functions
+#**********
 
+def cancel_subscription_logic(user):
+    """Business logic for subscription cancellation"""
+    user.cancellation_requested = True
+    user.subscription_status = 'pending_cancellation'
+    user.requested_change = {'new_tier': 'free', 'when': 'now'}
+    db.session.commit()
 
+    subscriptions = stripe.Subscription.list(
+        customer=user.stripe_customer_id,
+        status='active'
+    )
+    
+    if not subscriptions.data:
+        raise ValueError("No active subscription")
+    
+    stripe.Subscription.modify(
+        subscriptions.data[0].id,
+        cancel_at_period_end=True
+    )
 
+def resume_subscription_logic(user):
+    """Business logic for subscription resumption"""
+    user.cancellation_requested = False
+    user.subscription_status = 'active'
+    user.requested_change = None
+    db.session.commit()
 
-
-
+    subscriptions = stripe.Subscription.list(
+        customer=user.stripe_customer_id,
+        status='active'
+    )
+    
+    if not subscriptions.data:
+        raise ValueError("No active subscription")
+    
+    stripe.Subscription.modify(
+        subscriptions.data[0].id,
+        cancel_at_period_end=False
+    )
 
