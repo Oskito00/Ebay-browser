@@ -28,11 +28,15 @@ class User(UserMixin, db.Model):
 
     # Stripe Subscription
     stripe_customer_id = db.Column(db.String(50), index=True)
+    stripe_subscription_id = db.Column(db.String(50), index=True)
     tier = db.Column(JSON, default={'name': 'free', 'query_limit': 0})
     subscription_status = db.Column(db.String(20), default='inactive')  # active/past_due/canceled/expired
     current_period_end = db.Column(db.DateTime)
     requested_change = db.Column(JSON)  # {'new_tier': 'pro', 'when': 'now|renewal'}
+    pending_tier = db.Column(JSON)  # {'name': 'pro', 'query_limit': 100}
+    pending_effective_date = db.Column(db.DateTime)
     cancellation_requested = db.Column(db.Boolean, default=False)
+    last_checkout_session_id = db.Column(db.String(100))
 
 
     queries = db.relationship('Query', backref='user', lazy='dynamic')

@@ -12,6 +12,11 @@ TIER_LIMITS = {
     'business': 4000
 }
 
+PRICE_TIER_MAPPINGS= {
+    "price_1QyckCQ33R4TD00yBV26aiFs": {'name': 'individual', 'query_limit': 1500},
+    "price_1QzGoxQ33R4TD00yGBszzKw9": {'name': 'business', 'query_limit': 4000},
+}
+
 MARKETPLACE_IDS = {
     'EBAY_GB': {
         'code': 'EBAY_GB',

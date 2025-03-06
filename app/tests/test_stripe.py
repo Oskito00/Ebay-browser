@@ -5,7 +5,7 @@ import time
 from flask import current_app
 import stripe
 from app.models import User
-from app.routes.subscription import cancel_subscription, cancel_subscription_logic
+from app.routes.subscription import schedule_cancellation, cancel_subscription_logic
 from app.tests.conftest import db_session, app
 
 def test_api_version():
