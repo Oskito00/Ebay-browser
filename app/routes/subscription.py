@@ -5,7 +5,7 @@ import stripe
 from app.forms import SubscriptionActionForm
 from flask_wtf.csrf import CSRFProtect
 from app.extensions import db
-from app.stripe.stripe_fulfillment import get_tier_from_price
+from app.stripe.stripe_fulfillment import get_price_id_from_tier, get_tier_from_price
 
 csrf = CSRFProtect()
 bp = Blueprint('subscription', __name__, url_prefix='/subscription')
@@ -37,6 +37,8 @@ def handle_actions():
         return resume_subscription()
     if action == 'schedule_downgrade':
         return schedule_downgrade()
+    if action == 'cancel_scheduled_downgrade':
+        return cancel_scheduled_downgrade()
 
 def create_checkout_session():
     # Get the price id and tier from the form
@@ -248,6 +250,51 @@ def schedule_downgrade():
         db.session.commit()
         
         flash('Downgrade scheduled for next billing cycle', 'info')
+        return redirect(url_for('subscription.buy_subscription'))
+    
+    except stripe.error.StripeError as e:
+        flash(f'Error: {e.user_message}', 'danger')
+        return redirect(url_for('subscription.buy_subscription'))
+    
+def cancel_scheduled_downgrade():
+    print("Cancelling scheduled downgrade")
+    stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+    try:
+        # Get active subscription
+        subs = stripe.Subscription.list(
+            customer=current_user.stripe_customer_id,
+            status='active'
+        ).data
+        
+        if not subs:
+            flash('No active subscription', 'warning')
+            return redirect(url_for('subscription.buy_subscription'))
+        
+        # Get subscription item ID
+        items = stripe.SubscriptionItem.list(
+            subscription=subs[0].id,
+            limit=1
+        )
+        item_id = items.data[0].id
+
+        # Remove pending price change
+        stripe.Subscription.modify(
+            subs[0].id,
+            cancel_at_period_end=False,
+            items=[{
+                'id': item_id,
+                'price': get_price_id_from_tier(current_user.tier['name'])  # Original price
+            }],
+
+            metadata={'cancel_downgrade': True} #This is to prevent the webhook from processing the downgrade again, it will tell the webhook that the downgrade request has been cancelled
+        )
+        
+        # Clear pending downgrade
+        current_user.pending_tier = None
+        current_user.pending_effective_date = None
+        db.session.commit()
+        
+        flash('Scheduled downgrade canceled', 'success')
         return redirect(url_for('subscription.buy_subscription'))
     
     except stripe.error.StripeError as e:

@@ -83,6 +83,14 @@
                                 </button>
                             {% elif current_user.tier['query_limit'] > 1500 and current_user.pending_tier['name'] == 'individual' %}
                                 <h6>You have requested to downgrade to individual plan, it will be effective on {{ current_user.pending_effective_date.strftime('%Y-%m-%d') }}</h6>
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    name="action"
+                                    value="cancel_scheduled_downgrade"
+                                >
+                                    Cancel this scheduled downgrade
+                                </button>
                             {% endif %}
                         {% endif %}
                         </div>

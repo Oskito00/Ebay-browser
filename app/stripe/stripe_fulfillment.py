@@ -84,6 +84,21 @@ def handle_subscription_updated(event):
             user.pending_effective_date = None
             db.session.commit()
 
+    # 4. Handle Canceled Downgrade via Metadata
+    if sub.metadata.get('cancel_downgrade') == 'True':
+        user = User.query.filter_by(
+            stripe_customer_id=sub.customer
+        ).first()
+        if user:
+            user.pending_tier = None
+            user.pending_effective_date = None
+            db.session.commit()
+            # Clear metadata to prevent reprocessing
+            stripe.Subscription.modify(
+                sub.id,
+                metadata={'cancel_downgrade': None}
+            )
+
 #The subscription expires and is deleted
 
 def handle_subscription_deleted(event):
@@ -186,6 +201,13 @@ def get_tier_from_price(price_id):
         if price_key == price_id:
             return tier_data
     return {'name': 'free', 'query_limit': 100}  # Default tier
+
+def get_price_id_from_tier(tier_name):
+    """Get price ID from tier name"""
+    for price_key, tier_data in constants.PRICE_TIER_MAPPINGS.items():
+        if tier_data['name'] == tier_name:
+            return price_key
+    return None
 
 def is_upgrade(new_price_id, old_price_id):
     """Check if new price is higher tier"""
