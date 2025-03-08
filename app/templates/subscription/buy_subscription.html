@@ -108,7 +108,9 @@
                     <ul class="fa-ul">
 
                         <li><span class="fa-li"><i class="fas fa-check"></i></span>>15 Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls per day</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls Per Day</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>Multiple Telegram Notifications</li>
+
                     </ul>
                     <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
                         <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_BUSINESS }}">
@@ -145,6 +147,63 @@
                                     value="schedule_downgrade"
                                 >
                                     Downgrade to business plan
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4"></div>
+            <div class="card mb-5 mb-lg-0">
+                <div class="card-body">
+                    <h5 class="card-title text-primary text-uppercase text-center">Pro</h5>
+                    <h6 class="card-price text-center">£139.99<span class="period">/month</span></h6>
+                    <hr>
+                    <ul class="fa-ul">
+
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>>200 Active Searches</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>100,000 API Calls Per Day</li>
+                        <li><span class="fa-li"><i class="fas fa-check"></i></span>Multiple Telegram Notifications</li>
+
+                    </ul>
+                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_PRO }}">
+                        <input type="hidden" name="tier" value="pro">
+                        {{ form.hidden_tag() }}
+                        {% if current_user.requested_change['new_tier'] == 'pro' %}
+                            <h3>You have requested to upgrade to pro plan, it will be effective on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
+                        {% else %}
+                            <div class="d-grid">
+                                {% if current_user.tier['query_limit'] == 0 %}
+                                    <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    name="action"
+                                    value="create_checkout_session"
+                                >
+                                Buy Now
+                                </button>
+                            {% elif current_user.tier['query_limit'] != 0 and current_user.tier['query_limit'] < 100000 %}
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    name="action"
+                                    value="upgrade_subscription"
+                                    onclick="confirm('By upgrading to the pro plan, you will be charged immediately for the difference in price between your current plan and the pro plan. Are you sure you want to proceed?')"
+                                >
+                                    Upgrade now to pro
+                                </button>
+                            {% elif current_user.tier['query_limit'] > 100000 %}
+                                <button 
+                                    type="submit" 
+                                    class="btn btn-primary text-uppercase"
+                                    name="action"
+                                    value="schedule_downgrade"
+                                >
+                                    Downgrade to pro plan
                                 </button>
                             {% endif %}
                         {% endif %}

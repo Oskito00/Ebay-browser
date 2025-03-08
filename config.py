@@ -4,11 +4,13 @@ import logging
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from sqlalchemy import create_engine
 
-load_dotenv()  # Load .env file
+load_dotenv(override=True)  # Load .env file
+
+project_root = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'another-fallback-key')
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL','sqlite:///instance/app.db')
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(project_root, "instance/app.db")}'
     TIMEZONE = os.getenv('TIMEZONE', 'Europe/London')
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -32,6 +34,7 @@ class Config:
     #Stripe
     STRIPE_PRICE_INDIVIDUAL = os.getenv('STRIPE_PRICE_INDIVIDUAL')
     STRIPE_PRICE_BUSINESS = os.getenv('STRIPE_PRICE_BUSINESS')
+    STRIPE_PRICE_PRO = os.getenv('STRIPE_PRICE_PRO')
     STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
     STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
     STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
@@ -55,25 +58,20 @@ class TestingConfig(Config):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TELEGRAM_BOT_TOKEN = '7914809074'
 
-class SchedulerConfig:
-    # Use main app's database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///instance/app.db')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
-    SCHEDULER_JOBSTORES = {
-        'default': SQLAlchemyJobStore(
-            engine=create_engine(SQLALCHEMY_DATABASE_URI)
-        )
-    }
-    
-    SCHEDULER_TIMEZONE = 'UTC'
+class SchedulerConfig(Config):
+    # Inherit DB settings
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(project_root, "instance/app.db")}'
+
+    # Disable unnecessary features
+    WTF_CSRF_ENABLED = False
+    LOGIN_DISABLED = True
 
 class DevelopmentConfig(Config):
     DEBUG = False
     SQLALCHEMY_ECHO = False
 
 config = {
-    'development': Config,
+    'development':  DevelopmentConfig,
     'default': Config,
     'testing': TestingConfig
 } 

@@ -73,17 +73,23 @@ class NotificationManager:
             return False
     
     @staticmethod
-    def send_test_notification(user):
+    def send_test_notification(user, is_successfull_connection = False):
         try:
-            notifier = TelegramNotifier(
-                current_app.config['TELEGRAM_BOT_TOKEN'],
-                user.telegram_chat_id
-            )
-            print("Trying to send test notification")
-            return notifier.send_message("TESTING TESTING 123...")
+            chat_ids = [user.telegram_chat_ids['main']] + user.telegram_chat_ids['additional']
+            for chat_id in chat_ids:
+                notifier = TelegramNotifier(
+                    current_app.config['TELEGRAM_BOT_TOKEN'],
+                    chat_id
+                )
+                if is_successfull_connection:
+                    notifier.send_message("✅ Your account has been successfully connected!")
+                else:
+                    print(f"Sending test notification to {chat_id}")
+                    notifier.send_message("TESTING TESTING 123...")
         except Exception as e:
             print(f"Error sending test notification: {str(e)}")
-            return False
+            return False        
+    
     
     @staticmethod
     def send_price_drops(user, drops):

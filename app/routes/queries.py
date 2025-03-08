@@ -5,7 +5,6 @@ from app.forms import QueryForm, DeleteForm  # Create this form if needed
 from decimal import Decimal
 from sqlalchemy import inspect, exists
 from sqlalchemy.exc import OperationalError
-from app import scheduler
 from flask import current_app
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.jobstores.base import JobLookupError

@@ -214,7 +214,7 @@ def is_upgrade(new_price_id, old_price_id):
     new_tier = get_tier_from_price(new_price_id)
     old_tier = get_tier_from_price(old_price_id)
     
-    tier_order = ['free', 'individual', 'business']
+    tier_order = ['free', 'individual', 'business', 'pro']
     return tier_order.index(new_tier['name']) > tier_order.index(old_tier['name'])
 
 def is_downgrade(new_price_id, old_price_id):
@@ -222,5 +222,5 @@ def is_downgrade(new_price_id, old_price_id):
     new_tier = get_tier_from_price(new_price_id)
     old_tier = get_tier_from_price(old_price_id)
     
-    tier_order = ['free', 'individual', 'business']
+    tier_order = ['free', 'individual', 'business', 'pro']
     return tier_order.index(new_tier['name']) < tier_order.index(old_tier['name'])

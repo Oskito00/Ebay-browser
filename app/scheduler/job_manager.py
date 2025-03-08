@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from .core import scheduler
 from app.models import Query
 from app import db
@@ -13,7 +13,7 @@ def add_query_jobs(query_id):
         hours=24,
         args=[query_id],
         id=f'query_{query_id}_full',
-        next_run_time=datetime.now(timezone.utc),  # First run now
+        next_run_time=datetime.utcnow(),  # First run now
         misfire_grace_time=3600,  # 1 hour grace period
         coalesce=True  # Combine missed runs
     )
@@ -27,6 +27,8 @@ def add_query_jobs(query_id):
         id=f'query_{query_id}_recent'
     )
     
+    
+
 def remove_query_jobs(query_id):
     try:
         scheduler.remove_job(f'query_{query_id}_recent')

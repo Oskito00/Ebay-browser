@@ -12,7 +12,10 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
-    telegram_chat_id = db.Column(db.String(50))
+    telegram_chat_ids = db.Column(db.JSON, default={
+        'main': None,
+        'additional': []
+    })
     telegram_connected = db.Column(db.Boolean, default=False)
     telegram_notifications_enabled = db.Column(db.Boolean, default=False)
     notification_preferences = db.Column(db.JSON, default={
@@ -26,7 +29,7 @@ class User(UserMixin, db.Model):
 
     query_usage = db.Column(db.Integer, default=0)
 
-    # Stripe Subscription
+    # Stripe/Subscription
     stripe_customer_id = db.Column(db.String(50), index=True)
     stripe_subscription_id = db.Column(db.String(50), index=True)
     tier = db.Column(JSON, default={'name': 'free', 'query_limit': 0})

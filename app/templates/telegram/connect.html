@@ -23,23 +23,91 @@
             </ol>
         </div>
         
-        <div class="step">
-            <h3>3. Enter Chat ID</h3>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <div class="form-group">
-                    {{ form.chat_id.label }}
-                    {{ form.chat_id(class="form-control") }}
-                    {% for error in form.chat_id.errors %}
-                        <small class="text-danger">{{ error }}</small>
+        <form method="POST" action="{{ url_for('telegram.connect') }}">
+            {{ form.hidden_tag() }}
+            
+            <!-- Main Chat ID -->
+            <div class="form-group mb-4">
+                {{ form.main_chat_id.label }}
+                <div class="input-group">
+                    {{ form.main_chat_id(class="form-control") }}
+                    
+                </div>
+                <small class="form-text text-muted">
+                    Please enter your main Telegram chat ID. This will be your primary notification channel.
+                </small>
+            </div>
+        
+            <!-- Additional Chat IDs -->
+            <div class="form-group">
+                {% if current_user.tier['name'] == 'business' or current_user.tier['name'] == 'pro' %}
+                    {{ form.additional_chat_ids.label }}
+                    <div id="additional-chat-container" class="mb-3">
+                        {% for entry in form.additional_chat_ids %}
+                        <div class="input-group mb-2">
+                            {% set chat_value = current_user.telegram_chat_ids.additional[loop.index0] 
+                                if current_user.telegram_chat_ids and 
+                                   current_user.telegram_chat_ids.additional and 
+                                   loop.index0 < current_user.telegram_chat_ids.additional|length 
+                                else '' %}
+                            {{ entry(class="form-control", value=chat_value) }}
+                            <button type="button" 
+                                    class="btn btn-danger"
+                                    onclick="removeField(this)">
+                                Remove
+                            </button>
+                        </div>
                     {% endfor %}
                 </div>
-                <button type="submit" class="btn btn-primary">Connect</button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-</script>
+                <button type="button" 
+                        class="btn btn-success"
+                        onclick="addAdditionalField()">
+                    Add Another ID
+                </button>
+                <small class="form-text text-muted">
+                    Maximum 5 additional IDs allowed
+                </small>
+                {% else %}
+                    <p>Upgrade to <a href="{{ url_for('subscription.buy_subscription') }}">Business plan</a> to add more Telegram chat IDs, to be notified on multiple devices.</p>
+                {% endif %}
+            </div>
+        
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </form>
+        
+        <script>
+        let fieldCount = {{ form.additional_chat_ids.entries|length|tojson }};
+        const maxFields = 5;
+        
+        function addAdditionalField() {
+            if (fieldCount >= maxFields) return;
+            
+            const container = document.getElementById('additional-chat-container');
+            const newField = document.createElement('div');
+            newField.className = 'input-group mb-2';
+            newField.innerHTML = `
+                <input type="text" 
+                       class="form-control" 
+                       name="additional_chat_ids-${fieldCount}" 
+                       id="additional_chat_ids-${fieldCount}">
+                <button type="button" 
+                        class="btn btn-danger"
+                        onclick="removeField(this)">
+                    Remove
+                </button>
+            `;
+            container.appendChild(newField);
+            fieldCount++;
+        }
+        
+        function removeField(button) {
+            button.closest('.input-group').remove();
+            fieldCount--;
+        }
+        
+        function generateChatId() {
+            const newId = Math.floor(1000000000 + Math.random() * 9000000000);
+            document.getElementById('main_chat_id').value = newId;
+        }
+        </script>
 {% endblock %}

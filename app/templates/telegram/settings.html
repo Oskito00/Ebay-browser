@@ -4,39 +4,32 @@
 <div class="settings">
     <h1>⚙️ Account Settings</h1>
     
-    <div class="telegram-settings card">
+    <div class="card mb-4">
+        <div class="card-header">Telegram Settings</div>
         <div class="card-body">
-            <h2>🔗 Telegram Connection</h2>
-            
-            {% if current_user.telegram_chat_id %}
-                <div class="connected">
-                    <p>Status: <span class="text-success">Connected</span></p>
-                    <p>Chat ID: <code>{{ current_user.telegram_chat_id }}</code></p>
-                    <form method="POST" action="{{ url_for('telegram.update_chat_id') }}">
-                        {{ update_form.hidden_tag() }}
-                        <div class="form-group">
-                            {{ update_form.chat_id.label }}
-                            {{ update_form.chat_id(class="form-control") }}
-                            {% for error in update_form.chat_id.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        <button type="submit" class="btn btn-warning">Update Chat ID</button>
-                    </form>
-                    <form method="POST" action="{{ url_for('telegram.disconnect') }}">
-                        {{ disconnect_form.hidden_tag() }}
-                        <button type="submit" class="btn btn-danger">Disconnect</button>
-                    </form>
-                </div>
-            {% else %}
-                <div class="disconnected">
-                    <p>Status: <span class="text-danger">Not Connected</span></p>
+            <dl class="row">
+                <dt class="col-sm-3">Main Chat ID</dt>
+                <dd class="col-sm-9">
+                    {{ current_user.telegram_chat_ids.main or 'Not set' }}
                     <a href="{{ url_for('telegram.connect') }}" 
-                       class="btn btn-primary">
-                        Connect Telegram Account
+                       class="btn btn-sm btn-outline-primary ms-3">
+                       Edit
                     </a>
-                </div>
-            {% endif %}
+                </dd>
+                
+                <dt class="col-sm-3">Additional IDs</dt>
+                <dd class="col-sm-9">
+                    {% if current_user.telegram_chat_ids.additional %}
+                        <ul class="list-unstyled">
+                            {% for chat_id in current_user.telegram_chat_ids.additional %}
+                                <li>{{ chat_id }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        None
+                    {% endif %}
+                </dd>
+            </dl>
         </div>
     </div>
 </div>

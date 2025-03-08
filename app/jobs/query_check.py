@@ -161,7 +161,7 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
 
         # Auction ending detection
         end_time = item_data.get('end_time')
-        if existing and end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=24) and existing.auction_ending_notification_sent == False:
+        if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
             ending_auctions.append(existing)
             app.logger.debug(f"[Process Items] Auction ending soon: {end_time} (Item {existing.id if existing else 'new'})")
 
@@ -207,6 +207,7 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
         app.logger.error(f"[Process Items] Database commit failed: {str(e)}")
         db.session.rollback()
         raise
+
 
 def check_queries():
     app = scheduler.flask_app
