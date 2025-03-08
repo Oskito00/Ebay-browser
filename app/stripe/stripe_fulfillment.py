@@ -4,6 +4,7 @@ from flask import current_app
 from app.ebay import constants
 from app.models import User
 from app.extensions import db
+from app.utils.query_helpers import pause_queries_exceeding_limit
 
 #User buys new subscription
 
@@ -82,6 +83,7 @@ def handle_subscription_updated(event):
             user.tier = user.pending_tier
             user.pending_tier = None
             user.pending_effective_date = None
+            pause_queries_exceeding_limit(user)
             db.session.commit()
 
     # 4. Handle Canceled Downgrade via Metadata
@@ -111,6 +113,7 @@ def handle_subscription_deleted(event):
               print("User found, cancelling subscription")
               user.subscription_status = 'canceled'
               user.tier = {'name': 'free', 'query_limit': 0}
+              pause_queries_exceeding_limit(user)
               user.current_period_end = None
               user.cancellation_requested = False
               db.session.commit()
@@ -151,7 +154,7 @@ def handle_invoice_paid(event):
             user.tier = user.pending_tier
             user.pending_tier = None
             user.pending_effective_date = None
-        
+            pause_queries_exceeding_limit(user)
         # Update period end
         user.current_period_end = datetime.fromtimestamp(
             sub.current_period_end
@@ -163,19 +166,6 @@ def handle_invoice_paid(event):
     
     db.session.commit()
 
-def handle_invoice_payment_failed(event):
-    invoice = event['data']['object']
-    sub = stripe.Subscription.retrieve(invoice.subscription)
-    
-    # Revert tier if payment fails
-    user = User.query.filter_by(
-        stripe_subscription_id=sub.id
-    ).first()
-    
-    if user:
-        previous_price = sub.items.data[0].price.id
-        user.tier = get_tier_from_price(previous_price)
-        db.session.commit()
 
 def handle_invoice_payment_failed(event):
     invoice = event['data']['object']
@@ -189,6 +179,7 @@ def handle_invoice_payment_failed(event):
     if user:
         previous_price = sub.items.data[0].price.id
         user.tier = get_tier_from_price(previous_price)
+        pause_queries_exceeding_limit(user)
         db.session.commit()
         # TODO: Send email notification, notify user that their subscription has been downgraded because of payment failure
 
