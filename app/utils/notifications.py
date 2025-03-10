@@ -39,13 +39,19 @@ class NotificationManager:
         if (not user.telegram_connected or 
             not user.notification_preferences.get('new_items', True) or
             not items):
+            print("DEBUG: NotificationManager: send_item_notification: Not sending notification")
+            print("Debug telegram connected", user.telegram_connected)
+            print("Debug new items preference", user.notification_preferences.get('new_items', True))
+            print("Debug items", items)
             return False
         
         try:
             notifier = TelegramNotifier(
                 current_app.config['TELEGRAM_BOT_TOKEN'],
-                user.telegram_chat_id
+                user.telegram_chat_ids['main']
             )
+            print("DEBUG: user.telegram_chat_ids['main']", user.telegram_chat_ids['main'])
+            print("DEBUG: Trying to send new item notification", user.telegram_chat_ids['additional'])
             
             # Improved message formatting
             query_text = f" for '{query.keywords}'" if query else ""
@@ -65,8 +71,10 @@ class NotificationManager:
             # Add view more link
             if query:
                 message += f"🔍 <a href='{current_app.config['APP_URL']}/query/{query.id}'>View all items</a>"
-            
+            print("DEBUG notification.py line 70: Sending new item notification to telegram ID: ", user.telegram_chat_ids['main'])
             return notifier.send_message(message)
+            
+        
         
         except Exception as e:
             current_app.logger.error(f"Notification failed: {str(e)}")
@@ -95,7 +103,7 @@ class NotificationManager:
     def send_price_drops(user, drops):
         notifier = TelegramNotifier(
             current_app.config['TELEGRAM_BOT_TOKEN'],
-            user.telegram_chat_id
+            user.telegram_chat_ids['main']
         )
         for drop in drops:
             message = (
@@ -112,20 +120,24 @@ class NotificationManager:
     def send_auction_alerts(user, items):
         notifier = TelegramNotifier(
             current_app.config['TELEGRAM_BOT_TOKEN'],
-            user.telegram_chat_id
+            user.telegram_chat_ids['main']
         )
         for item in items:
-            time_left = item.end_time - datetime.now(timezone.utc)
-            hours_left = round(time_left.total_seconds() / 3600, 1)
-            message = (
+            print("DEBUG: item.end_time", item.end_time)
+            print("DEBUG: datetime.now(timezone.utc)", datetime.now(timezone.utc))
+            if item.end_time:
+                item.end_time = item.end_time.replace(tzinfo=timezone.utc)
+                time_left = item.end_time - datetime.now(timezone.utc)
+                hours_left = round(time_left.total_seconds() / 3600, 1)
+                message = (
                 "⏳ **Auction Ending Soon**\n"
                 f"📦 Item: {item.title}\n"
                 f"💰 Current Price: £{item.price}\n"
                 f"⏰ Ends in: {hours_left} hours\n"
                 f"🔗 [View Item]({item.url})"
             )
-            if user.notification_preferences.get('auction_alerts', True):
-                notifier.send_message(message, parse_mode='Markdown')
+                if user.notification_preferences.get('auction_alerts', True):
+                    notifier.send_message(message, parse_mode='Markdown')
     
     
     

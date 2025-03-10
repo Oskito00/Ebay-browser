@@ -161,8 +161,12 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
 
         # Auction ending detection
         end_time = item_data.get('end_time')
-        if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
-            ending_auctions.append(existing)
+        print("DEBUG - [Process Items]: end_time", end_time)
+        print("DEBUG - [Process Items]: datetime.now(timezone.utc)", datetime.now(timezone.utc))
+        if end_time:    
+            end_time = end_time.replace(tzinfo=timezone.utc)
+            if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
+                ending_auctions.append(existing)
             app.logger.debug(f"[Process Items] Auction ending soon: {end_time} (Item {existing.id if existing else 'new'})")
 
     try:
@@ -189,14 +193,17 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
 
             if new_items and prefs.get('new_items', True):
                 notification_counts['new_items'] = len(new_items)
+                print("DEBUG Process Items: Sending new item notification")
                 NotificationManager.send_item_notification(user, new_items)
             
             if price_drops and prefs.get('price_drops', True):
                 notification_counts['price_drops'] = len(price_drops)
+                print("DEBUG Process Items: Sending price drop notification")
                 NotificationManager.send_price_drops(user, price_drops)
             
             if ending_auctions and prefs.get('auction_alerts', True):
                 notification_counts['auction_alerts'] = len(ending_auctions)
+                print("DEBUG Process Items: Sending auction alert notification")
                 NotificationManager.send_auction_alerts(user, ending_auctions)
 
             app.logger.debug(f"[Process Items] Notifications sent: {notification_counts}")

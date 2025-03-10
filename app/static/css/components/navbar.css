@@ -1,0 +1,226 @@
+/* Modern Navbar Styles */
+:root {
+    --primary: #4361ee;
+    --primary-dark: #3a56d4;
+    --light: #f8f9fa;
+    --dark: #212529;
+    --gray: #6c757d;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Base Navbar */
+  .navbar {
+    background-color: white;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  
+  .navbar-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.8rem 1.5rem;
+  }
+  
+  .navbar-logo {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--primary);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+  
+  .navbar-menu {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .navbar-item {
+    color: var(--dark);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.2s;
+  }
+  
+  .navbar-item:hover {
+    color: var(--primary);
+  }
+  
+  /* Dropdown */
+  .dropdown {
+    position: relative;
+  }
+  
+  .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .dropdown-toggle::after {
+    content: '';
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-left: 0.3rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+  
+  .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow);
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s;
+  }
+  
+  .dropdown.active .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  
+  .dropdown-menu a {
+    display: block;
+    padding: 0.8rem 1rem;
+    color: var(--dark);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  
+  .dropdown-menu a:hover {
+    background: var(--light);
+    color: var(--primary);
+  }
+  
+  /* Telegram Status */
+  .telegram-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+  
+  .telegram-status.connected {
+    color: var(--success);
+  }
+  
+  .telegram-status.disconnected {
+    color: var(--danger);
+  }
+  
+  .status-icon {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  .connected .status-icon {
+    background-color: var(--success);
+  }
+  
+  .disconnected .status-icon {
+    background-color: var(--danger);
+  }
+  
+  /* Button styling */
+  .button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+  }
+  
+  .primary {
+    background-color: var(--primary);
+    color: white !important;
+  }
+  
+  .primary:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  /* Mobile Toggle */
+  .navbar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+  
+  .navbar-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background-color: var(--dark);
+    margin: 4px 0;
+    transition: all 0.3s;
+  }
+  
+  /* Mobile Styles */
+  @media (max-width: 768px) {
+    .navbar-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      gap: 0.8rem;
+      transform: translateY(-150%);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    
+    .navbar-menu.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .navbar-toggle {
+      display: block;
+    }
+    
+    .dropdown {
+      width: 100%;
+    }
+    
+    .dropdown-menu {
+      position: static;
+      box-shadow: none;
+      transform: none;
+      min-width: 100%;
+      padding-left: 1rem;
+      display: none;
+    }
+    
+    .dropdown.active .dropdown-menu {
+      display: block;
+    }
+    
+    .navbar-item {
+      width: 100%;
+    }
+  }

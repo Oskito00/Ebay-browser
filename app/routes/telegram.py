@@ -45,6 +45,7 @@ def connect():
             'main': form.main_chat_id.data,
             'additional': additional_ids
         }
+        current_user.telegram_connected = True
         db.session.commit()
         
         flash('Settings saved!', 'success')

@@ -2,38 +2,66 @@
 <html>
 <head>
     <title>Ebay Bot{% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% block styles %}{% endblock %}
 </head>
 <body>
-    <nav>
-        <div class="nav-container">
-            <a href="{{ url_for('main.index') }}" class="logo">Ebay Bot</a>
-            <div class="nav-links">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="{{ url_for('main.index') }}" class="navbar-logo">Ebay Bot</a>
+            
+            <button class="navbar-toggle" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
+            
+            <div class="navbar-menu">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('subscription.buy_subscription') }}">Buy Subscription</a>
-                    <a href="{{ url_for('queries.manage_queries') }}">My Searches</a>
-                    <a href="{{ url_for('auth.logout') }}">Logout</a>
-                    <div class="telegram-status">
-                        {% if current_user.is_authenticated and current_user.telegram_connected %}
-                            <span class="status-dot connected"></span>
-                            <a href="{{ url_for('main.settings') }}">Settings</a>
-                        {% else %}
-                            <span class="status-dot disconnected"></span>
-                            <a href="{{ url_for('telegram.connect') }}">Connect Telegram</a>
-                        {% endif %}
+                    <a href="{{ url_for('queries.manage_queries') }}" class="navbar-item">My Searches</a>
+                    <a href="{{ url_for('subscription.buy_subscription') }}" class="navbar-item">Subscription</a>
+                    
+                    <div class="navbar-item dropdown">
+                        <a href="#" class="dropdown-toggle">Account</a>
+                        <div class="dropdown-menu">
+                            {% if current_user.telegram_connected %}
+                                <div class="telegram-status connected">
+                                    <span class="status-icon"></span>Telegram Connected
+                                </div>
+                                <a href="{{ url_for('main.settings') }}">Settings</a>
+                            {% else %}
+                                <div class="telegram-status disconnected">
+                                    <span class="status-icon"></span>Telegram Not Connected
+                                </div>
+                                <a href="{{ url_for('telegram.connect') }}">Connect Telegram</a>
+                            {% endif %}
+                            <a href="{{ url_for('auth.logout') }}">Logout</a>
+                        </div>
                     </div>
                 {% else %}
-                    <a href="{{ url_for('auth.login') }}">Login</a>
-                    <a href="{{ url_for('auth.register') }}">Register</a>
+                    <a href="{{ url_for('auth.login') }}" class="navbar-item">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="navbar-item button primary">Register</a>
                 {% endif %}
             </div>
-           
         </div>
     </nav>
+    
     <div class="content">
         {% block content %}{% endblock %}
     </div>
+    
+    <script>
+        // Mobile menu toggle
+        document.querySelector('.navbar-toggle').addEventListener('click', function() {
+            document.querySelector('.navbar-menu').classList.toggle('active');
+        });
+        
+        // Dropdown toggle
+        document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.parentNode.classList.toggle('active');
+            });
+        });
+    </script>
 </body>
 </html>
-
-<!-- TODO: Make this work on mobile -->
