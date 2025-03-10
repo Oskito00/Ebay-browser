@@ -1,27 +1,243 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/home.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
 {% block content %}
-<div class="home-content">
-    <h1>Welcome to Ebay Monitor</h1>
-    
-    {% if current_user.is_authenticated %}
-        <p>You are logged in as {{ current_user.email }}</p>
-        <a href="{{ url_for('queries.manage_queries') }}" class="button">
-            Manage Your Searches
-        </a>
-        <a href="{{ url_for('telegram.send_test_notification') }}" class="button">
-            Send test notification
-        </a>
-    {% else %}
-        <p>Track prices and get alerts for eBay items</p>
-        <div class="auth-options">
-            <a href="{{ url_for('auth.register') }}" class="button">
-                Create Free Account
-            </a>
-            <a href="{{ url_for('auth.login') }}" class="button secondary">
-                Existing User Login
-            </a>
+<main class="home">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Track Ebay Prices <span class="animated-text">Effortlessly</span></h1>
+                <p class="subtitle">Get instant alerts when items are listed, prices drop or auctions are ending soon.</p>
+                
+                {% if current_user.is_authenticated %}
+                    <div class="cta-buttons">
+                        <a href="{{ url_for('queries.manage_queries') }}" class="cta-button primary">
+                            <i class="fas fa-search"></i> Manage Your Searches
+                        </a>
+                        <a href="{{ url_for('telegram.send_test_notification') }}" class="cta-button secondary">
+                            <i class="fas fa-bell"></i> Test Notifications
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="cta-buttons">
+                        <a href="{{ url_for('auth.register') }}" class="cta-button primary">
+                            <i class="fas fa-user-plus"></i> Create Free Account
+                        </a>
+                        <a href="{{ url_for('auth.login') }}" class="cta-button secondary">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="hero-image">
+    <div class="phone-mockup">
+        <div class="phone-screen">
+            <div class="notification">
+                <div class="notification-header">
+                    <i class="fas fa-bell"></i>
+                    <span>New Item Listed</span>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">Pokemon base set booster pack 1999 </div>
+                    <div class="notification-details">
+                        <span>£249.99</span>
+                    </div>
+                    <div class="notification-cta">Tap to view</div>
+                </div>
+            </div>
+            <div class="notification" style="animation-delay: 0.5s">
+                <div class="notification-header">
+                    <i class="fas fa-bell"></i>
+                    <span>Price Drop</span>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">PlayStation 5</div>
+                    <div class="notification-details">
+                        <span class="old-price">$499.99</span>
+                        <span class="new-price">$399.99</span>
+                        <span class="savings">Save $100!</span>
+                    </div>
+                    <div class="notification-cta">Tap to view</div>
+                </div>
+            </div>
+
         </div>
-    {% endif %}
+    </div>
 </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            
+            <div class="feature-card" data-aos="fade-up">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Create Custom Searches</h3>
+                    <p>Set up searches with keywords, price ranges, and item conditions to track exactly what you're looking for.</p>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Automated Monitoring</h3>
+                    <p>Our system continuously monitors Ebay for your searches, checking for new listings, price changes, and auctions ending soon.</p>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="200">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Instant Notifications</h3>
+                    <p>Get alerts via Telegram when prices drop, new items appear, or auctions are about to end.</p>
+                </div>
+            </div>
+            
+            <div class="feature-card" data-aos="fade-up" data-aos-delay="300">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="feature-content">
+                    <h3>Price Trend Analysis</h3>
+                    <p>Track price history and trends to make informed purchasing decisions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="use-cases">
+        <div class="container">
+            <h2 class="section-title">Perfect For</h2>
+            
+            <div class="use-case-grid">
+                <div class="use-case" data-aos="zoom-in">
+                    <div class="use-case-icon">
+                        <i class="fas fa-gift"></i>
+                    </div>
+                    <h3>Collectors</h3>
+                    <p>Find rare items at the best prices without constant manual searching.</p>
+                </div>
+                
+                <div class="use-case" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="use-case-icon">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <h3>Resellers</h3>
+                    <p>Get notified of underpriced items the moment they're listed.</p>
+                </div>
+                
+                <div class="use-case" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="use-case-icon">
+                        <i class="fas fa-tshirt"></i>
+                    </div>
+                    <h3>Fashion Hunters</h3>
+                    <p>Find designer brands at discounted prices automatically.</p>
+                </div>
+                
+                <div class="use-case" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="use-case-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <h3>Tech Enthusiasts</h3>
+                    <p>Track electronics and get the best deals before they're gone.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial/Stats -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card" data-aos="fade-right">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Active Searches</div>
+                </div>
+                
+                <div class="stat-card" data-aos="fade-up">
+                    <div class="stat-number">2+ Clients</div>
+                    <div class="stat-label">New Business</div>
+                </div>
+                
+                <div class="stat-card" data-aos="fade-left">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Satisfaction</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container">
+            <div class="cta-content" data-aos="fade-up">
+                <h2>Ready to never miss a deal?</h2>
+                <p>Set up your first search in less than 60 seconds and get alerts directly to your phone.</p>
+                
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('queries.manage_queries') }}" class="cta-button primary">
+                        Start Searching Now
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('auth.register') }}" class="cta-button primary">
+                        Create Your Free Account
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script>
+    // Initialize AOS animation library
+    document.addEventListener('DOMContentLoaded', function() {
+        AOS.init({
+            duration: 800,
+            easing: 'ease-out',
+            once: true
+        });
+        
+        // Animated text effect for hero
+        const words = ['Effortlessly', 'Automatically', 'Instantly'];
+        let wordIndex = 0;
+        const animatedText = document.querySelector('.animated-text');
+        
+        setInterval(() => {
+            animatedText.style.opacity = '0';
+            setTimeout(() => {
+                wordIndex = (wordIndex + 1) % words.length;
+                animatedText.textContent = words[wordIndex];
+                animatedText.style.opacity = '1';
+            }, 500);
+        }, 3000);
+        
+        // Force page to complete loading
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (document.readyState === 'complete') {
+                    // Force any pending operations to complete
+                    document.body.style.display = 'block';
+                }
+            }, 1000);
+        });
+    });
+</script>
 {% endblock %}

@@ -1,0 +1,47 @@
+:root {
+    /* Color Variables */
+    --primary: #007bff;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --light: #f8f9fa;
+    --dark: #333333;
+    --gray: #666666;
+    --gray-light: #dddddd;
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    
+    /* Shadow */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Base Elements */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: var(--dark);
+    background-color: white;
+  }
+  
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  /* Import Components */
+  @import url('components/navbar.css');
+  @import url('components/buttons.css');
+  @import url('components/forms.css');
+  @import url('components/tables.css');
+  @import url('components/cards.css');
+  @import url('components/status.css');

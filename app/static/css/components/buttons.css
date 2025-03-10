@@ -1,0 +1,45 @@
+.button, .btn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--primary);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .button:hover, .btn:hover {
+    background-color: #0069d9;
+  }
+  
+  .btn {
+    font-size: 80%;
+    letter-spacing: .1rem;
+    padding: var(--space-md);
+  }
+  
+  .btn-edit {
+    color: var(--primary);
+    margin-right: var(--space-md);
+  }
+  
+  .btn-delete {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .btn-pause {
+    background-color: var(--warning);
+    border-color: var(--warning);
+  }
+  
+  .btn-resume {
+    background-color: var(--success);
+    border-color: var(--success);
+  }

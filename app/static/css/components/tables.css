@@ -1,0 +1,20 @@
+.queries-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-md);
+  }
+  
+  .queries-table th, .queries-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-light);
+    text-align: left;
+  }
+  
+  .queries-table th {
+    background-color: var(--light);
+    font-weight: bold;
+  }
+  
+  .queries-table tr:hover {
+    background-color: rgba(0,0,0,0.02);
+  }

@@ -1,0 +1,29 @@
+.card {
+    border: none;
+    border-radius: 1rem;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-md);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+  
+  .card:hover {
+    margin-top: -.25rem;
+    margin-bottom: calc(.25rem + var(--space-lg));
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .card-price {
+    font-size: 3rem;
+    margin: 0;
+  }
+  
+  .period {
+    font-size: 0.8rem;
+  }
+  
+  .query-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }

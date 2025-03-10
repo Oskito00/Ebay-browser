@@ -1,45 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Ebay Bot{% block title %}{% endblock %}</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <title>Ebay Monitor{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/navbar.css') }}">
     {% block styles %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-container">
-            <a href="{{ url_for('main.index') }}" class="navbar-logo">Ebay Bot</a>
-            
-            <button class="navbar-toggle" aria-label="Toggle navigation">
+    <nav>
+        <div class="nav-container">
+            <a href="{{ url_for('main.index') }}" class="logo">Ebay Monitor</a>
+            <button class="mobile-toggle" aria-label="Toggle menu">
                 <span></span><span></span><span></span>
             </button>
-            
-            <div class="navbar-menu">
+            <div class="nav-links">
                 {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('queries.manage_queries') }}" class="navbar-item">My Searches</a>
-                    <a href="{{ url_for('subscription.buy_subscription') }}" class="navbar-item">Subscription</a>
-                    
-                    <div class="navbar-item dropdown">
-                        <a href="#" class="dropdown-toggle">Account</a>
-                        <div class="dropdown-menu">
-                            {% if current_user.telegram_connected %}
-                                <div class="telegram-status connected">
-                                    <span class="status-icon"></span>Telegram Connected
-                                </div>
-                                <a href="{{ url_for('main.settings') }}">Settings</a>
-                            {% else %}
-                                <div class="telegram-status disconnected">
-                                    <span class="status-icon"></span>Telegram Not Connected
-                                </div>
-                                <a href="{{ url_for('telegram.connect') }}">Connect Telegram</a>
-                            {% endif %}
-                            <a href="{{ url_for('auth.logout') }}">Logout</a>
-                        </div>
-                    </div>
+                    <a href="{{ url_for('queries.manage_queries') }}" class="nav-item">My Searches</a>
+                    <a href="{{ url_for('subscription.buy_subscription') }}" class="nav-item">Subscription</a>
+                    <a href="{{ url_for('main.settings') }}" class="nav-item">Settings</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-item">Logout</a>
                 {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="navbar-item">Login</a>
-                    <a href="{{ url_for('auth.register') }}" class="navbar-item button primary">Register</a>
+                    <a href="{{ url_for('auth.login') }}" class="nav-item">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-item button">Register</a>
                 {% endif %}
             </div>
         </div>
@@ -50,18 +33,47 @@
     </div>
     
     <script>
-        // Mobile menu toggle
-        document.querySelector('.navbar-toggle').addEventListener('click', function() {
-            document.querySelector('.navbar-menu').classList.toggle('active');
-        });
-        
-        // Dropdown toggle
-        document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
-            toggle.addEventListener('click', function(e) {
-                e.preventDefault();
-                this.parentNode.classList.toggle('active');
-            });
+        // Completely rewritten mobile toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileToggle = document.querySelector('.mobile-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (mobileToggle && navLinks) {
+                // Toggle menu when hamburger is clicked
+                mobileToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Toggle active classes
+                    this.classList.toggle('active');
+                    navLinks.classList.toggle('active');
+                    
+                    // Log state for debugging
+                    console.log('Mobile menu toggled:', navLinks.classList.contains('active'));
+                });
+                
+                // Close menu when clicking outside
+                document.addEventListener('click', function(e) {
+                    // Only run if menu is open
+                    if (navLinks.classList.contains('active')) {
+                        // Check if click was outside menu and toggle
+                        if (!navLinks.contains(e.target) && !mobileToggle.contains(e.target)) {
+                            navLinks.classList.remove('active');
+                            mobileToggle.classList.remove('active');
+                        }
+                    }
+                });
+                
+                // Add touchstart event for better mobile response
+                mobileToggle.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    this.classList.toggle('active');
+                    navLinks.classList.toggle('active');
+                }, {passive: false});
+            }
         });
     </script>
+    
+    {% block scripts %}{% endblock %}
 </body>
 </html>
