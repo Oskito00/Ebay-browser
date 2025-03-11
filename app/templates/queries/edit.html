@@ -1,24 +1,161 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/create.css') }}">
+{% endblock %}
+
 {% block content %}
-<h1>Edit Search</h1>
-<form method="POST">
-    {{ form.hidden_tag() }}  <!-- Add this line -->
-    <div class="form-group">
-        <label for="keywords">Search Keywords:</label>
-        <input type="text" id="keywords" name="keywords" 
-               value="{{ query.keywords }}" required>
-    </div>
-    
-    <div class="form-group">
-        <label for="threshold">Price Alert Threshold (%):</label>
-        <input type="number" id="threshold" name="threshold" 
-               step="0.1" min="0" max="100"
-               value="{{ query.price_alert_threshold }}" required>
-    </div>
-    
-    <button type="submit" class="btn-save">Save Changes</button>
-    <a href="{{ url_for('queries.manage_queries') }}" class="btn-cancel">Cancel</a>
-</form>
-<!-- TODO: Edit button doesn't redirect to manage queries -->
+<div class="container">
+    <h1>Edit Search</h1>
+    <p class="subtitle">Update your search</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('queries.edit_query', query_id=query.id) }}">
+        {{ form.csrf_token }}
+        
+        <div class="primary-fields">
+            <div class="form-group">
+                {{ form.keywords.label }}
+                {{ form.keywords(class="form-control") }}
+                {% if form.keywords.errors %}
+                    <div class="errors">{% for error in form.keywords.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+
+            {% if form.check_interval %}
+                <div class="form-group">
+                    {{ form.check_interval.label }}
+                    {{ form.check_interval(class="form-control") }}
+                    {% if form.check_interval.errors %}
+                        <div class="errors">{% for error in form.check_interval.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+            
+            {% if form.required_keywords %}
+            <div class="form-group">
+                {{ form.required_keywords.label }}
+                {{ form.required_keywords(class="form-control") }}
+                {% if form.required_keywords.errors %}
+                    <div class="errors">{% for error in form.required_keywords.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            
+            
+            {% if form.excluded_keywords %}
+            <div class="form-group">
+                {{ form.excluded_keywords.label }}
+                {{ form.excluded_keywords(class="form-control") }}
+                {% if form.excluded_keywords.errors %}
+                    <div class="errors">{% for error in form.excluded_keywords.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="price-range">
+                <div class="form-group">
+                    {{ form.min_price.label }}
+                    {{ form.min_price(class="form-control") }}
+                    {% if form.min_price.errors %}
+                        <div class="errors">{% for error in form.min_price.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.max_price.label }}
+                    {{ form.max_price(class="form-control") }}
+                    {% if form.max_price.errors %}
+                        <div class="errors">{% for error in form.max_price.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="filters-card">
+            <h3>Search Filters</h3>
+            <div class="filters-grid">
+                {% if form.category %}
+                <div class="form-group">
+                    {{ form.category.label }}
+                    {{ form.category(class="form-control") }}
+                    {% if form.category.errors %}
+                        <div class="errors">{% for error in form.category.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.condition %}
+                <div class="form-group">
+                    {{ form.condition.label }}
+                    {{ form.condition(class="form-control") }}
+                    {% if form.condition.errors %}
+                        <div class="errors">{% for error in form.condition.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.buying_format %}
+                <div class="form-group">
+                    {{ form.buying_format.label }}
+                    {{ form.buying_format(class="form-control") }}
+                    {% if form.buying_format.errors %}
+                        <div class="errors">{% for error in form.buying_format.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if form.buying_options %}
+                <div class="form-group">
+                    {{ form.buying_options.label }}
+                    {{ form.buying_options(class="form-control") }}
+                    {% if form.buying_options.errors %}
+                        <div class="errors">{% for error in form.buying_options.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.item_location %}
+                <div class="form-group">
+                    {{ form.item_location.label }}
+                    {{ form.item_location(class="form-control") }}
+                    {% if form.item_location.errors %}
+                        <div class="errors">{% for error in form.item_location.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="checkbox-group">
+
+            {% if form.exact_match %}
+            <div class="form-group">
+                {{ form.exact_match(class="form-checkbox") }}
+                {{ form.exact_match.label }}
+                {% if form.exact_match.errors %}
+                    <div class="errors">{% for error in form.exact_match.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('queries.manage_queries') }}" class="cancel-button">Cancel</a>
+            <button type="submit">Save Changes</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

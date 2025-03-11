@@ -8,13 +8,4 @@ bp = Blueprint('main', __name__)
 def index():
     return render_template('index.html', user=current_user)
 
-@bp.route('/settings')
-@login_required
-def settings():
-    update_form = TelegramConnectForm()
-    disconnect_form = TelegramDisconnectForm()
-    return render_template(
-        'telegram/settings.html',
-        update_form=update_form,
-        disconnect_form=disconnect_form
-    )
+

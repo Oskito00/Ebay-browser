@@ -1,0 +1,394 @@
+/* Auth pages styling - login/register */
+:root {
+    --sky-blue-light: #e6f7ff;
+    --sky-blue: #87cefa;
+    --sky-blue-dark: #4a9eda;
+    --accent-color: #ff6b6b;
+    --text-color: #333;
+    --text-light: #666;
+    --white: #fff;
+    --gray-light: #f5f5f5;
+    --gray: #e0e0e0;
+    --error-color: #e74c3c;
+    --success-color: #2ecc71;
+  }
+
+ Fix for iOS Safari overscroll background
+ html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* Global box-sizing */
+  *, *:before, *:after {
+    box-sizing: border-box;
+  }
+
+  /* Apply the same font family as home.css throughout */
+  .auth-page {
+    background-color: var(--sky-blue-light);
+    min-height: calc(100vh - 60px); /* Account for navbar */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    max-width: 100vw; /* Ensure full width */
+  }
+  
+  /* Container for the auth card */
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  .auth-container {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    max-width: 900px;
+    width: 50%;
+    margin: 0 auto; /* Center the container */
+    box-sizing: border-box;
+  }
+  
+  .auth-content {
+    flex: 1;
+    padding: 3rem;
+  }
+  
+  .auth-image {
+    flex: 1;
+    background-color: var(--sky-blue-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .auth-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .auth-header h1 {
+    font-size: 2.2rem;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .auth-header .subtitle {
+    color: var(--text-light);
+    font-size: 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  /* Form styling */
+  .auth-form {
+    width: 100%;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .input-container {
+    display: flex;
+    border: 1px solid var(--gray);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  
+  .input-container:focus-within {
+    border-color: var(--sky-blue-dark);
+    box-shadow: 0 0 0 3px rgba(74, 158, 218, 0.1);
+  }
+  
+  .input-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    background-color: var(--gray-light);
+    color: var(--text-light);
+  }
+  
+  .form-control {
+    flex: 1;
+    border: none;
+    padding: 12px 15px;
+    font-size: 0.95rem;
+    outline: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .form-error {
+    color: var(--error-color);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    padding-left: 48px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .auth-button {
+    background-color: var(--sky-blue-dark);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.2s, transform 0.2s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .auth-button:hover {
+    background-color: #3a8dc7;
+    transform: translateY(-2px);
+  }
+  
+  .auth-button:active {
+    transform: translateY(0);
+  }
+  
+  .button-icon {
+    margin-left: 8px;
+    transition: transform 0.2s;
+  }
+  
+  .auth-button:hover .button-icon {
+    transform: translateX(4px);
+  }
+  
+  .auth-footer {
+    text-align: center;
+    margin-top: 2rem;
+    color: var(--text-light);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .auth-footer a {
+    color: var(--sky-blue-dark);
+    text-decoration: none;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .auth-footer a:hover {
+    text-decoration: underline;
+    color: var(--accent-color);
+  }
+  
+  /* Alert styling */
+  .alert {
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .alert-danger {
+    background-color: #fde8e8;
+    color: var(--error-color);
+    border: 1px solid #f8d0d0;
+  }
+  
+  .alert-success {
+    background-color: #e8f8e8;
+    color: var(--success-color);
+    border: 1px solid #d0f0d0;
+  }
+  
+  /* Decorative card on side panel */
+  .floating-card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    width: 80%;
+    transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+    transition: transform 0.5s ease;
+    animation: float 4s ease-in-out infinite;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .floating-card:hover {
+    transform: perspective(1000px) rotateY(-2deg) rotateX(2deg);
+  }
+  
+  @keyframes float {
+    0% {
+      transform: perspective(1000px) rotateY(-5deg) rotateX(5deg) translateY(0px);
+    }
+    50% {
+      transform: perspective(1000px) rotateY(-5deg) rotateX(5deg) translateY(-15px);
+    }
+    100% {
+      transform: perspective(1000px) rotateY(-5deg) rotateX(5deg) translateY(0px);
+    }
+  }
+  
+  .price-notification {
+    display: flex;
+    align-items: flex-start;
+  }
+  
+  .notification-icon {
+    background-color: rgba(74, 158, 218, 0.1);
+    color: var(--sky-blue-dark);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    flex-shrink: 0;
+  }
+  
+  .notification-content h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .notification-content p {
+    margin: 0 0 12px 0;
+    color: var(--text-light);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  .price-change {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+  }
+  
+  .old-price {
+    text-decoration: line-through;
+    color: var(--text-light);
+  }
+  
+  .discount-arrow {
+    color: var(--text-light);
+  }
+  
+  .new-price {
+    font-weight: 600;
+    color: var(--success-color);
+  }
+  
+  .discount-badge {
+    background-color: var(--success-color);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 5px;
+  }
+  
+  /* Responsive styling */
+  @media (max-width: 900px) {
+    .auth-container {
+      flex-direction: column;
+      max-width: 500px;
+      margin: 0 auto; /* Center the container */
+    }
+    
+    .auth-content {
+      padding: 2rem;
+    }
+    
+    .auth-image {
+      display: none; /* Hide image section on mobile */
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .auth-page {
+      padding: 1.5rem; /* Add more padding for smaller screens */
+    }
+    
+    .container {
+      padding: 0;
+    }
+    
+    .auth-container {
+      margin: 0 auto;
+      width: 100%;
+      border-radius: 12px;
+    }
+  }
+  
+  @media (max-width: 500px) {
+    .auth-page {
+      padding: 1rem; /* Add padding for mobile */
+    }
+    
+    .auth-content {
+      padding: 1.5rem;
+    }
+    
+    .auth-header h1 {
+      font-size: 1.8rem;
+    }
+    
+    .auth-button {
+      padding: 10px 15px;
+    }
+  }
+
+/* Chart preview for registration page */
+.chart-preview {
+  display: flex;
+  align-items: flex-end;
+  height: 40px;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.chart-bar {
+  flex: 1;
+  background: linear-gradient(to top, var(--sky-blue-dark), var(--sky-blue));
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+}
+
+.floating-card:hover .chart-bar {
+  background: linear-gradient(to top, #3a8dc7, var(--sky-blue));
+}
+
+/* Bar animation */
+.chart-bar:nth-child(1) { animation: barFloat 2s ease-in-out infinite; }
+.chart-bar:nth-child(2) { animation: barFloat 2s ease-in-out infinite 0.3s; }
+.chart-bar:nth-child(3) { animation: barFloat 2s ease-in-out infinite 0.5s; }
+.chart-bar:nth-child(4) { animation: barFloat 2s ease-in-out infinite 0.7s; }
+.chart-bar:nth-child(5) { animation: barFloat 2s ease-in-out infinite 0.9s; }
+.chart-bar:nth-child(6) { animation: barFloat 2s ease-in-out infinite 1.1s; }
+.chart-bar:nth-child(7) { animation: barFloat 2s ease-in-out infinite 1.3s; }
+
+@keyframes barFloat {
+  0%, 100% { height: calc(var(--height, 20px) - 0px); }
+  50% { height: calc(var(--height, 20px) + 5px); }
+}
+

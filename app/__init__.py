@@ -74,5 +74,8 @@ def create_app(config_class=None):
 
     from app.routes.telegram import bp as telegram_bp
     app.register_blueprint(telegram_bp, url_prefix='/telegram')
+
+    from app.routes.settings import bp as settings_bp
+    app.register_blueprint(settings_bp, url_prefix='/settings')
         
     return app

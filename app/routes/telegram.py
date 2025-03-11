@@ -49,7 +49,7 @@ def connect():
         db.session.commit()
         
         flash('Settings saved!', 'success')
-        return redirect(url_for('main.settings'))
+        return redirect(url_for('settings.settings'))
     
     return render_template('telegram/connect.html', form=form)
 
@@ -62,75 +62,6 @@ def send_test_notification():
     NotificationManager.send_test_notification(current_user)
     return "Test notification sent"
 
-# @bp.route('/connect_telegram', methods=['POST'])
-# @login_required
-# def handle_connect():
-#     """Process Telegram chat ID submission"""
-#     print("Handling connect")
-#     try:
-#         validate_csrf(request.form.get('csrf_token'))
-#     except ValidationError:
-#         abort(400)
-
-#     form = TelegramConnectForm(request.form)
-    
-#     # Validate main chat ID
-#     main_chat = form.main_chat_id.data.strip()
-#     if not main_chat.isdigit():
-#         flash('Main Chat ID must be numeric', 'danger')
-#         return redirect(url_for('telegram.connect'))
-    
-#     # Check main chat ID uniqueness
-#     existing_main = User.query.filter(
-#         User.telegram_chat_ids['main'].astext == main_chat
-#     ).first()
-#     if existing_main and existing_main.id != current_user.id:
-#         flash('Main Chat ID already registered', 'danger')
-#         return redirect(url_for('telegram.connect'))
-
-#     # Process additional IDs
-#     additional_chats = []
-#     for idx, chat_id in enumerate(form.additional_chat_ids.data):
-#         cleaned_id = chat_id.strip()
-#         if not cleaned_id:
-#             continue
-#         if not cleaned_id.isdigit():
-#             flash(f'Additional Chat ID #{idx+1} must be numeric', 'danger')
-#             return redirect(url_for('telegram.connect'))
-#         if cleaned_id == main_chat:
-#             flash('Additional IDs cannot match Main Chat ID', 'danger')
-#             return redirect(url_for('telegram.connect'))
-#         if cleaned_id in additional_chats:
-#             flash('Duplicate Additional Chat IDs detected', 'danger')
-#             return redirect(url_for('telegram.connect'))
-#         additional_chats.append(cleaned_id)
-
-#     # Check additional ID uniqueness
-#     existing_additional = User.query.filter(
-#         User.telegram_chat_ids['additional'].contains(additional_chats)
-#     ).first()
-#     if existing_additional:
-#         flash('One or more Additional Chat IDs already registered', 'danger')
-#         return redirect(url_for('telegram.connect'))
-
-#     # Update user
-#     current_user.telegram_chat_ids = {
-#         'main': main_chat,
-#         'additional': additional_chats[:5]  # Enforce max
-#     }
-#     current_user.telegram_connected = True
-    
-#     try:
-#         db.session.commit()
-#         NotificationManager.send_test_notification(current_user, is_successfull_connection=True)
-#         flash('Telegram connection successful!', 'success')
-#     except Exception as e:
-#         db.session.rollback()
-#         current_app.logger.error(f"Telegram connection failed: {str(e)}")
-#         flash('Connection failed. Please try again.', 'danger')
-    
-#     return redirect(url_for('main.settings'))
-
 @bp.route('/connection_status')
 @login_required
 def connection_status():
@@ -142,11 +73,6 @@ def connection_status():
 @bp.route('/guide')
 def setup_guide():
     return render_template('telegram/guide.html')
-
-@bp.route('/settings')
-@login_required
-def settings():
-    return render_template('settings.html')
 
 @bp.route('/update-chat-id', methods=['POST'])
 @login_required

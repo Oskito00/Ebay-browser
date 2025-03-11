@@ -1,54 +1,109 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<h1>Your Saved Searches</h1>
-<div class="query-controls">
-    <a href="{{ url_for('queries.create_query') }}" class="button">New Search</a>
-    <form method="POST" action="{{ url_for('queries.toggle_all_queries') }}" style="display: inline-block;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <button type="submit" class="button {% if all_active %}btn-pause{% else %}btn-resume{% endif %}">
-            {{ 'Pause All' if all_active else 'Resume All' }}
-        </button>
-    </form>
-</div>
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/manage.css') }}">
+{% endblock %}
 
-<table class="queries-table">
-    <thead>
-        <tr>
-            <th>Status</th>
-            <th>Keywords</th>
-            <th>Alert Threshold</th>
-            <th>Last Checked</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for query in queries %}
-        <tr>
-            <td>
-                <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="status-btn {% if query.is_active %}active{% else %}paused{% endif %}">
+{% block content %}
+<main class="manage-page">
+    <div class="container">
+        <div class="manage-header">
+            <h1>Your Searches</h1>
+            <p class="subtitle">Track prices for items that matter to you</p>
+            
+            <div class="manage-actions">
+                <a href="{{ url_for('queries.create_query') }}" class="add-button">
+                    <i class="fa-solid fa-plus"></i> Add New Search
+                </a>
+            </div>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if queries %}
+        <div class="query-list-container">
+            <div class="query-list-header">
+                <div class="query-term-header">Search Term</div>
+                <div class="query-details-header">Price Range</div>
+                <div class="query-status-header">Status</div>
+                <div class="query-actions-header">Actions</div>
+            </div>
+            
+            {% for query in queries %}
+            <div class="query-list-item {% if query.is_active %}active{% else %}paused{% endif %}">
+                <div class="query-term">
+                    <h3>{{ query.keywords }}</h3>
+                    {% if query.last_checked %}
+                    <span class="last-checked">Last checked: {{ query.last_checked.strftime('%Y-%m-%d %H:%M') }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="query-details">
+                    {% if query.min_price or query.max_price %}
+                        {% if query.min_price and query.max_price %}
+                            <span class="price-range">£{{ query.min_price }} - £{{ query.max_price }}</span>
+                        {% elif query.min_price %}
+                            <span class="price-range">Min: £{{ query.min_price }}</span>
+                        {% elif query.max_price %}
+                            <span class="price-range">Max: £{{ query.max_price }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="price-range">Any price</span>
+                    {% endif %}
+                </div>
+                
+                <div class="query-status">
+                    <div class="status-indicator {% if query.is_active %}active{% else %}paused{% endif %}">
                         {{ 'Active' if query.is_active else 'Paused' }}
-                    </button>
-                </form>
-            </td>
-            <td>{{ query.keywords }}</td>
-            <td>{{ query.price_alert_threshold }}%</td>
-            <td>{{ query.last_checked|datetimeformat if query.last_checked else 'Never' }}</td>
-            <td class="actions">
-                <a href="{{ url_for('queries.edit_query', query_id=query.id) }}" class="btn-edit">Edit</a>
-                <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.id) }}">
-                    {{ delete_form.hidden_tag() }}
-                    {{ delete_form.submit(class="btn-delete") }}
-                </form>
-            </td>
-        </tr>
+                    </div>
+                </div>
+                
+                <div class="query-actions">
+                    <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.id) }}" class="toggle-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="action-button toggle">
+                            {% if query.is_active %}
+                                <i class="fas fa-pause"></i>
+                            {% else %}
+                                <i class="fas fa-play"></i>
+                            {% endif %}
+                        </button>
+                    </form>
+                    
+                    <a href="{{ url_for('queries.edit_query', query_id=query.id) }}" class="action-button edit" title="Edit">
+                        <i class="fa-solid fa-pen"></i>
+                    </a>
+                    
+                    <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.id) }}" onsubmit="return confirm('Are you sure you want to delete this search?');" class="delete-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="action-button delete" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
         {% else %}
-        <tr>
-            <td colspan="5">No saved searches yet. <a href="{{ url_for('queries.create_query') }}">Create one</a></td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <h2>No searches created yet</h2>
+            <p>Create your first eBay search to start tracking prices</p>
+            <a href="{{ url_for('queries.create_query') }}" class="add-button">
+                Create Your First Search
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</main>
 {% endblock %}

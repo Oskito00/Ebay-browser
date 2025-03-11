@@ -17,7 +17,7 @@ class User(UserMixin, db.Model):
         'additional': []
     })
     telegram_connected = db.Column(db.Boolean, default=False)
-    telegram_notifications_enabled = db.Column(db.Boolean, default=False)
+    telegram_notifications_enabled = db.Column(db.Boolean, default=True)
     notification_preferences = db.Column(db.JSON, default={
         'price_drops': True,
         'new_items': True,

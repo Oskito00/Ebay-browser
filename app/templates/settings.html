@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/settings.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Settings</h1>
+        <!-- Telegram Connection -->
+        <h3>Telegram Connection</h3>
+        <div class="settings-card">
+            
+            <div class="settings-section">
+                {% if current_user.telegram_connected %}
+                <div class="connected-status">
+                    <div class="status-icon connected"></div>
+                    <p>Your Telegram account is connected</p>
+                </div>
+                <div class="telegram-info">
+                    <p><strong>Main Chat ID:</strong> {{ current_user.telegram_chat_ids['main'] }}</p>
+                    <p><strong>Additional Chat IDs:</strong> {{ current_user.telegram_chat_ids['additional'] }}</p>
+                </div>
+                <a href="{{ url_for('telegram.connect') }}" class="secondary-link">Update Telegram Chat Ids</a>
+                {% else %}
+                <div class="connected-status">
+                    <div class="status-icon disconnected"></div>
+                    <p>Your Telegram account is not connected</p>
+                </div>
+                <p class="connection-instructions">
+                    To connect your Telegram account <a href="{{ url_for('telegram.connect') }}">click here</a>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Notification Settings -->
+        <div class="">
+            <h3>Notification Preferences</h3>
+        
+                <form method="POST" action="{{ url_for('settings.toggle_notification') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="checkbox-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="price_drops" name="price_drops" class="form-checkbox" 
+                                   {% if current_user.notification_preferences.price_drops %}checked{% endif %}>
+                            <label for="price_drops">Price drops</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="new_items" name="new_items" class="form-checkbox" 
+                                   {% if current_user.notification_preferences.new_items %}checked{% endif %}>
+                            <label for="new_items">New items</label>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input type="checkbox" id="auction_alerts" name="auction_alerts" class="form-checkbox" 
+                                   {% if current_user.notification_preferences.auction_alerts %}checked{% endif %}>
+                            <label for="auction_alerts">Auction alerts</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="primary-button">Save Notification Settings</button>
+                    </div>
+                </form>
+        </div>
+</div>
+{% endblock %}

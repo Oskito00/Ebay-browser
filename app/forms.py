@@ -105,3 +105,7 @@ class SubscriptionActionForm(FlaskForm):
     action = StringField('action')
     submit = SubmitField('Submit')
     when = StringField('when')
+
+
+class SettingsForm(FlaskForm):
+    pass;

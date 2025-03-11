@@ -1,10 +1,14 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/create.css') }}">
+{% endblock %}
 
 {% block content %}
-<h1>Create New Search</h1>
-
-{# Add flash messages section #}
 <div class="container">
+    <h1>Create New Search</h1>
+    <p class="subtitle">Set up an eBay price tracker</p>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -14,101 +18,143 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
+    <form method="POST" action="{{ url_for('queries.create_query') }}">
+        {{ form.csrf_token }}
+        
+        <div class="primary-fields">
+            <div class="form-group">
+                {{ form.keywords.label }}
+                {{ form.keywords(class="form-control") }}
+                {% if form.keywords.errors %}
+                    <div class="errors">{% for error in form.keywords.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+
+            {% if form.check_interval %}
+                <div class="form-group">
+                    {{ form.check_interval.label }}
+                    {{ form.check_interval(class="form-control") }}
+                    {% if form.check_interval.errors %}
+                        <div class="errors">{% for error in form.check_interval.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            
+            {% if form.required_keywords %}
+            <div class="form-group">
+                {{ form.required_keywords.label }}
+                {{ form.required_keywords(class="form-control") }}
+                {% if form.required_keywords.errors %}
+                    <div class="errors">{% for error in form.required_keywords.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            
+            <div class="form-group">
+                {{ form.excluded_keywords.label }}
+                {{ form.excluded_keywords(class="form-control") }}
+                {% if form.excluded_keywords.errors %}
+                    <div class="errors">{% for error in form.excluded_keywords.errors %}{{ error }}{% endfor %}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="price-range">
+            <div class="form-group">
+                  {{ form.min_price.label }}
+                  {{ form.min_price(class="form-control") }}
+                  {% if form.min_price.errors %}
+                      <div class="errors">{% for error in form.min_price.errors %}{{ error }}{% endfor %}</div>
+                  {% endif %}
+              </div>
+              
+              <div class="form-group">
+                  {{ form.max_price.label }}
+                  {{ form.max_price(class="form-control") }}
+                  {% if form.max_price.errors %}
+                      <div class="errors">{% for error in form.max_price.errors %}{{ error }}{% endfor %}</div>
+                  {% endif %}
+              </div>
+          </div>
+        </div>
+
+        <div class="filters-card">
+            <h3>Search Filters</h3>
+            <div class="filters-grid">
+                {% if form.category %}
+                <div class="form-group">
+                    {{ form.category.label }}
+                    {{ form.category(class="form-control") }}
+                    {% if form.category.errors %}
+                        <div class="errors">{% for error in form.category.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.condition %}
+                <div class="form-group">
+                    {{ form.condition.label }}
+                    {{ form.condition(class="form-control") }}
+                    {% if form.condition.errors %}
+                        <div class="errors">{% for error in form.condition.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.buying_format %}
+                <div class="form-group">
+                    {{ form.buying_format.label }}
+                    {{ form.buying_format(class="form-control") }}
+                    {% if form.buying_format.errors %}
+                        <div class="errors">{% for error in form.buying_format.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if form.buying_options %}
+                <div class="form-group">
+                    {{ form.buying_options.label }}
+                    {{ form.buying_options(class="form-control") }}
+                    {% if form.buying_options.errors %}
+                        <div class="errors">{% for error in form.buying_options.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if form.item_location %}
+                <div class="form-group">
+                    {{ form.item_location.label }}
+                    {{ form.item_location(class="form-control") }}
+                    {% if form.item_location.errors %}
+                        <div class="errors">{% for error in form.item_location.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                
+            </div>
+            
+        </div>
+
+        <div class="checkbox-group">
+
+            {% if form.exact_match %}
+            <div class="form-group">
+                {{ form.exact_match(class="form-checkbox") }}
+                {{ form.exact_match.label }}
+                {% if form.exact_match.errors %}
+                    <div class="errors">{% for error in form.exact_match.errors %}{{ error }}{% endfor %}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('queries.manage_queries') }}" class="cancel-button">Cancel</a>
+            <button type="submit">Create Search</button>
+        </div>
+    </form>
 </div>
-
-<form method="POST" action="{{ url_for('queries.create_query') }}">
-    {{ form.hidden_tag() }}
-
-    <div class="filter-section">
-      <h3>Marketplace</h3>
-      <select id="marketplace" name="marketplace" class="marketplace_select">
-        <option value="EBAY_GB" data-site="ebay.co.uk">Great Britain (ebay.co.uk)</option>
-        <option value="EBAY_US" data-site="ebay.com">United States (ebay.com)</option>
-        <option value="EBAY_DE" data-site="ebay.de">Germany (ebay.de)</option>
-        <option value="EBAY_CA" data-site="ebay.ca">Canada [English] (ebay.ca)</option>
-        <option value="EBAY_AU" data-site="ebay.com.au">Australia (ebay.com.au)</option>
-        <option value="EBAY_FR" data-site="ebay.fr">France (ebay.fr)</option>
-        <option value="EBAY_IT" data-site="ebay.it">Italy (ebay.it)</option>
-        <option value="EBAY_ES" data-site="ebay.es">Spain (ebay.es)</option>
-        <option value="EBAY_NL" data-site="ebay.nl">Netherlands (ebay.nl)</option>
-        <option value="EBAY_PL" data-site="ebay.pl">Poland (ebay.pl)</option>
-      </select>
-    </div>
-    
-    <!-- Keywords -->
-    <div class="form-group">
-        {{ form.keywords.label }}
-        {{ form.keywords(class="form-control") }}
-    </div>
-
-    <!-- Required Keywords -->
-    <div class="form-group">
-        {{ form.required_keywords.label }}
-        {{ form.required_keywords(class="form-control") }}
-    </div>
-
-    <!-- Excluded Keywords -->
-    <div class="form-group">
-        {{ form.excluded_keywords.label }}
-        {{ form.excluded_keywords(class="form-control") }}
-    </div>
-    
-    <!-- Check Interval -->
-    <div class="form-group">
-        {{ form.check_interval.label }}
-        {{ form.check_interval(class="form-control") }}
-    </div>
-    
-    <!-- Price Fields -->
-    <div class="form-group">
-        {{ form.min_price.label }}
-        {{ form.min_price(class="form-control") }}
-    </div>
-    
-    <div class="form-group">
-        {{ form.max_price.label }}
-        {{ form.max_price(class="form-control") }}
-    </div>
-
-    <!-- Condition Filters -->
-    <div class="form-group">
-        <h3>Condition</h3>
-        <select id="condition" name="condition" class="condition_select">
-            <option value="">Any Condition</option>
-          <option value="NEW">New</option>
-          <option value="USED">Used</option>
-        </select>
-    </div>
-
-    <!-- Buying options -->
-    <div class="form-group">
-        <h3>Buying Options</h3>
-        <select id="buying_options" name="buying_options" class="buying_options_select">
-            <option value="FIXED_PRICE|AUCTION">Any</option>
-          <option value="FIXED_PRICE">Buy It Now</option>
-          <option value="AUCTION">Auction</option>
-        </select>
-    </div>
-
-      <!-- Location Filters -->
-      <div class="filter-section">
-        <h3>Item Location</h3>
-        <select id="item_location" name="item_location" class="item_location_select">
-          <option value="GB" selected>United Kingdom</option>
-          <option value="US">United States</option>
-          <option value="DE">Germany</option>
-          <option value="CA">Canada</option>
-          <option value="AU">Australia</option>
-          <option value="FR">France</option>
-          <option value="IT">Italy</option>
-          <option value="ES">Spain</option>
-          <option value="NL">Netherlands</option>
-          <option value="PL">Poland</option>
-        </select>
-      </div>
-    
-    <button type="submit" class="btn btn-primary" name="submit">Save Search</button>
-    <a href="{{ url_for('queries.manage_queries') }}" class="btn-cancel">Cancel</a>
-</form>
-<!-- TODO: Save search button is not redirecting to queries page -->
 {% endblock %}

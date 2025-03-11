@@ -26,8 +26,8 @@
   /* Base Elements */
   body {
     font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    /* margin: 0; */
+    /* padding: 0; */
     color: var(--dark);
     background-color: white;
   }
@@ -35,7 +35,7 @@
   .content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    /* padding: 20px; */
   }
   
   /* Import Components */
