@@ -20,8 +20,7 @@ def update_user_usage(user, query, operation='add'):
                 # Calculate how much they need to upgrade
                 needed = new_usage - user.query_usage
                 raise ValueError(
-                    f"Activating this query would exceed your daily limit by {needed}. "
-                    f"Current: {user.query_usage}/{max(user.tier['query_limit']-300, 0)}. "
+                    f"Activating this query would exceed your daily limit. "
                     "Please upgrade your plan."
                 )
             user.query_usage = new_usage

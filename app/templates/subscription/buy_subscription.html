@@ -1,241 +1,100 @@
 {% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/buy-subscription.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <h1 class="mb-4">Choose Your Plan</h1>
+<div class="subscription-container">
+    <h1 class="text-center mb-5 text-primary">Choose Your Plan</h1>
     
-    <div class="row">
-        <div class="current-plan mb-5 p-3 bg-light rounded">
-            <h3>
-                Current Plan: 
+    <div class="row justify-content-center">
+        <div class="col-lg-8 mb-4 p-4 bg-white shadow rounded text-center">
+            <h3 class="fw-bold">Current Plan: 
                 <span class="badge 
                     {% if current_user.tier['name'] == 'free' %}bg-warning
                     {% elif current_user.tier['name'] == 'individual' %}bg-primary
                     {% elif current_user.tier['name'] == 'business' %}bg-success
+                    {% elif current_user.tier['name'] == 'pro' %}bg-success
                     {% else %}bg-secondary{% endif %}">
-                    {% if current_user.tier['name'] == 'free' %}Free
-                    {% elif current_user.tier['name'] == 'individual' %}Individual
-                    {% elif current_user.tier['name'] == 'business' %}Business
-                    {% else %}Custom{% endif %}
+                    {{ current_user.tier['name']|capitalize }}
                 </span>
             </h3>
-            <p>
+            <p class="mt-2">
                 {% if current_user.cancellation_requested == False %}
                     Renews on:
                 {% else %}
                     Ending on:
                 {% endif %}
                 <strong>
-                    {% if current_user.current_period_end %}
-                        {{ current_user.current_period_end.strftime('%Y-%m-%d') }}
-                    {% else %}
-                        N/A
-                    {% endif %}
+                    {{ current_user.current_period_end.strftime('%Y-%m-%d') if current_user.current_period_end else 'N/A' }}
                 </strong>
             </p>
-        </div>
-        
-        <!-- Individual Tier -->
-        <div class="col-lg-4">
-            <div class="card mb-5 mb-lg-0">
-                <div class="card-body">
-                    <h5 class="card-title text-primary text-uppercase text-center">Individual</h5>
-                    <h6 class="card-price text-center">£19.99<span class="period">/month</span></h6>
-                    <hr>
-                    <ul class="fa-ul">
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>5+ Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>1500 API Calls per day</li>
-                    </ul>
-                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
-                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_INDIVIDUAL }}">
-                        <input type="hidden" name="tier" value="individual">
-                        {{ form.hidden_tag() }}
-                        {% if current_user.requested_change['new_tier'] == 'individual' %}
-                            <h3>You have requested to upgrade to individual plan, it will be effective on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
-                        {% else %}
-                        <div class="d-grid">
-                            {% if current_user.tier['query_limit'] == 0 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="create_checkout_session"
-                                >
-                                Buy Now
-                                </button>
-                            {% elif current_user.tier['query_limit'] != 0 and current_user.tier['query_limit'] < 1500 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="upgrade_subscription"
-                                    onclick="confirm('By upgrading to the individual plan, you will be charged immediately for the difference in price between your current plan and the individual plan. Are you sure you want to proceed?')"
-                                >
-                                    Upgrade now to individual
-                                </button>
-                            {% elif current_user.tier['query_limit'] > 1500 and current_user.pending_tier['name'] != 'individual' %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="schedule_downgrade"
-                                >
-                                    Downgrade to individual plan
-                                </button>
-                            {% elif current_user.tier['query_limit'] > 1500 and current_user.pending_tier['name'] == 'individual' %}
-                                <h6>You have requested to downgrade to individual plan, it will be effective on {{ current_user.pending_effective_date.strftime('%Y-%m-%d') }}</h6>
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="cancel_scheduled_downgrade"
-                                >
-                                    Cancel this scheduled downgrade
-                                </button>
-                            {% endif %}
-                        {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4"></div>
-            <div class="card mb-5 mb-lg-0">
-                <div class="card-body">
-                    <h5 class="card-title text-primary text-uppercase text-center">Business</h5>
-                    <h6 class="card-price text-center">£49.99<span class="period">/month</span></h6>
-                    <hr>
-                    <ul class="fa-ul">
-
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>>15 Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>4000 API Calls Per Day</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>Multiple Telegram Notifications</li>
-
-                    </ul>
-                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
-                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_BUSINESS }}">
-                        <input type="hidden" name="tier" value="business">
-                        {{ form.hidden_tag() }}
-                        {% if current_user.requested_change['new_tier'] == 'business' %}
-                            <h3>You have requested to upgrade to business plan, it will be effective on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
-                        {% else %}
-                            <div class="d-grid">
-                                {% if current_user.tier['query_limit'] == 0 %}
-                                    <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="create_checkout_session"
-                                >
-                                Buy Now
-                                </button>
-                            {% elif current_user.tier['query_limit'] != 0 and current_user.tier['query_limit'] < 4000 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="upgrade_subscription"
-                                    onclick="confirm('By upgrading to the business plan, you will be charged immediately for the difference in price between your current plan and the business plan. Are you sure you want to proceed?')"
-                                >
-                                    Upgrade now to business
-                                </button>
-                            {% elif current_user.tier['query_limit'] > 4000 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="schedule_downgrade"
-                                >
-                                    Downgrade to business plan
-                                </button>
-                            {% endif %}
-                        {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4"></div>
-            <div class="card mb-5 mb-lg-0">
-                <div class="card-body">
-                    <h5 class="card-title text-primary text-uppercase text-center">Pro</h5>
-                    <h6 class="card-price text-center">£139.99<span class="period">/month</span></h6>
-                    <hr>
-                    <ul class="fa-ul">
-
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>>200 Active Searches</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>100,000 API Calls Per Day</li>
-                        <li><span class="fa-li"><i class="fas fa-check"></i></span>Multiple Telegram Notifications</li>
-
-                    </ul>
-                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
-                        <input type="hidden" name="price_id" value="{{ config.STRIPE_PRICE_PRO }}">
-                        <input type="hidden" name="tier" value="pro">
-                        {{ form.hidden_tag() }}
-                        {% if current_user.requested_change['new_tier'] == 'pro' %}
-                            <h3>You have requested to upgrade to pro plan, it will be effective on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
-                        {% else %}
-                            <div class="d-grid">
-                                {% if current_user.tier['query_limit'] == 0 %}
-                                    <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="create_checkout_session"
-                                >
-                                Buy Now
-                                </button>
-                            {% elif current_user.tier['query_limit'] != 0 and current_user.tier['query_limit'] < 100000 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="upgrade_subscription"
-                                    onclick="confirm('By upgrading to the pro plan, you will be charged immediately for the difference in price between your current plan and the pro plan. Are you sure you want to proceed?')"
-                                >
-                                    Upgrade now to pro
-                                </button>
-                            {% elif current_user.tier['query_limit'] > 100000 %}
-                                <button 
-                                    type="submit" 
-                                    class="btn btn-primary text-uppercase"
-                                    name="action"
-                                    value="schedule_downgrade"
-                                >
-                                    Downgrade to pro plan
-                                </button>
-                            {% endif %}
-                        {% endif %}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-
-        <!-- Cancel Subscription -->
-        {% if current_user.cancellation_requested == False and current_user.tier['name'] != 'free' %}
-        <div class="col-lg-4">
-            <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
-                {{ form.hidden_tag() }}
-                <input type="hidden" name="tier" value="free">
-                <button type="submit" class="btn btn-primary text-uppercase" name="action" value="schedule_cancellation">Cancel Your Subscription</button>
-                <!-- TODO: When this is clicked ask why they want to cancel -->
-            </form>
-            </div>
-        {% elif current_user.cancellation_requested == True and current_user.tier['name'] != 'free' %}
-            <div class="col-lg-4">
-                <h3>You have requested to cancel your subscription, it will end on {{ current_user.current_period_end.strftime('%Y-%m-%d') }}</h3>
+            {% if current_user.cancellation_requested == True %}
+                <p>You have requested a cancellation of your subscription. Your subscription will end on {{ current_user.current_period_end.strftime('%Y-%m-%d') if current_user.current_period_end else 'N/A' }}.</p>
                 <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
                     {{ form.hidden_tag() }}
-                    <input type="hidden" name="action" value="resume_subscription">
-                    <button type="submit" class="btn btn-primary text-uppercase">Resume Your Subscription</button>
+                    <input type="hidden" name="tier" value="free">
+                    <button type="submit" name="action" value="resume_subscription" class="btn btn-primary">Resume Subscription</button>
                 </form>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
-
+    
+    <div class="row">
+        {% for plan in [
+            {'name': 'Individual', 'price': '£19.99', 'queries': '1500 API Calls per day', 'searches': '5+ Active Searches', 'price_id': config.STRIPE_PRICE_INDIVIDUAL, 'tier_name': 'individual', 'query_limit': 1500},
+            {'name': 'Business', 'price': '£49.99', 'queries': '4000 API Calls per day', 'searches': '>15 Active Searches', 'price_id': config.STRIPE_PRICE_BUSINESS, 'tier_name': 'business', 'query_limit': 4000},
+            {'name': 'Pro', 'price': '£139.99', 'queries': '100,000 API Calls per day', 'searches': '>200 Active Searches', 'price_id': config.STRIPE_PRICE_PRO, 'tier_name': 'pro', 'query_limit': 100000}
+        ] %}
+        <div class="col-lg-4">
+            <div class="card plan-card shadow-sm border-0">
+                <div class="subscription-header">
+                    <h5 class="card-title text-uppercase fw-bold">{{ plan.name }}</h5>
+                    <h6 class="card-price">{{ plan.price }}<span class="period">/month</span></h6>
+                    <hr>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> {{ plan.searches }}</li>
+                        <li><i class="fas fa-check text-success"></i> {{ plan.queries }}</li>
+                    </ul>
+                    <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+                        <input type="hidden" name="price_id" value="{{ plan.price_id }}">
+                        <input type="hidden" name="tier" value="{{ plan.tier }}">
+                        {{ form.hidden_tag() }}
+                        {% if current_user.pending_tier['name'] == plan.tier_name %}
+                            <h2>You have requested a downgrade to this plan. Your plan will be downgraded on {{ current_user.pending_effective_date.strftime('%Y-%m-%d') if current_user.pending_effective_date else 'N/A' }}.</h2>
+                            <button type="submit" name="action" value="cancel_scheduled_downgrade" class="btn btn-danger">Cancel scheduled downgrade</button>
+                        {% elif current_user.tier['name'] == 'free' %}
+                            <button type="submit" class="btn btn-primary w-100" name="action" value="create_checkout_session">Select Plan</button>
+                        {% elif current_user.tier['query_limit'] != 0 and current_user.tier['query_limit'] < plan.query_limit %}
+                            <button type="submit" class="btn btn-primary w-100" name="action" value="upgrade_subscription" onclick="confirm('By upgrading to {{ plan.name }} plan, you will be charged immediately for the difference in price between your current plan and the {{ plan.name }} plan. Are you sure you want to proceed?')">Upgrade now to {{ plan.name }}</button>
+                        {% elif current_user.tier['query_limit'] > plan.query_limit %}
+                            <button type="submit" class="btn btn-primary w-100" name="action" value="schedule_downgrade">Downgrade to {{ plan.name }}</button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if current_user.cancellation_requested == False and current_user.tier['name'] != 'free' %}
+    <div class="text-center mt-4">
+        <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="tier" value="free">
+            <button type="submit" name="action" value="schedule_cancellation" class="btn btn-danger">Cancel Your Subscription</button>
+        </form>
+    </div>
+    {% elif current_user.cancellation_requested == True %}
+    <div class="text-center mt-4">
+        <p>You have requested a cancellation of your subscription. Your subscription will end on {{ current_user.current_period_end.strftime('%Y-%m-%d') if current_user.current_period_end else 'N/A' }}.</p>
+        <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="tier" value="free">
+            <button type="submit" name="action" value="resume_subscription" class="btn btn-primary">Resume Subscription</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
-
