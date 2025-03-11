@@ -1,0 +1,338 @@
+/* Settings page styling */
+:root {
+    --sky-blue-light: #e6f7ff;
+    --sky-blue: #87cefa;
+    --sky-blue-dark: #4a9eda;
+    --text-color: #333;
+    --text-light: #666;
+    --white: #fff;
+    --gray-light: #f5f5f5;
+    --gray: #e0e0e0;
+    --error-color: #e74c3c;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --danger-light: #fde8e8;
+  }
+  
+  /* Fix for overscroll background color */
+  html {
+    background-color: white;
+  }
+  
+  /* Fix for iOS Safari overscroll background */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Global box-sizing to prevent overflow */
+  *, *:before, *:after {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-color);
+    background-color: var(--sky-blue-light);
+    min-height: 100vh;
+  }
+  
+  .container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+
+.telegram-connect {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.connect-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.page-title {
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 2.5rem;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    color: #718096;
+    font-size: 1.1rem;
+}
+
+.connection-steps {
+    display: grid;
+    gap: 2rem;
+}
+
+.step-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    background: #4299e1;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    color: #2d3748;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.telegram-btn {
+    background: #38a169;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+
+.telegram-btn:hover {
+    background: #2f855a;
+}
+
+.command-list {
+    padding-left: 1.5rem;
+    color: #4a5568;
+}
+
+.command-list li {
+    margin-bottom: 0.5rem;
+}
+
+
+
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-label {
+    display: block;
+    color: #2d3748;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    font-family: inherit;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.input-hint {
+    color: #718096;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.additional-ids {
+    background: #f7fafc;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.add-btn {
+    background: #cbd5e0;
+    color: #2d3748;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.add-btn:hover {
+    background: #a0aec0;
+}
+
+.remove-btn {
+    background: #fed7d7;
+    color: #c53030;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.remove-btn:hover {
+    background: #feb2b2;
+}
+
+.upgrade-notice {
+    background: #fffaf0;
+    border-left: 4px solid #dd6b20;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.upgrade-link {
+    color: #dd6b20;
+    font-weight: 500;
+}
+
+.submit-btn {
+    background: #4299e1;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    width: 100%;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.submit-btn:hover {
+    background: #3182ce;
+}
+
+.alert {
+    padding: 1rem;
+    font-family: inherit;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.alert-success {
+    background: #f0fff4;
+    color: #38a169;
+    border: 1px solid #c6f6d5;
+}
+
+.alert-error {
+    background: #fff5f5;
+    color: #c53030;
+    border: 1px solid #fed7d7;
+}
+
+@media (max-width: 640px) {
+    .step-card {
+        flex-direction: column;
+        align-items: start;
+        padding: 1.5rem;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .remove-btn {
+        width: fit-content;
+    }
+}
+
+@media (max-width: 480px) { /* Targets small phones specifically */
+    .telegram-connect {
+        padding: 1rem 0.5rem;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .step-card {
+        padding: 1rem;
+        margin: 0 -0.5rem;
+        width: calc(100% + 1rem);
+        border-radius: 0;
+        box-shadow: none;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .connect-form {
+        padding: 0 0.5rem;
+    }
+
+    .form-section {
+        padding: 1rem;
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+        width: calc(100% + 1rem);
+    }
+
+    .input-group {
+        flex-wrap: wrap;
+    }
+
+    .form-input,
+    .telegram-btn,
+    .submit-btn {
+        font-size: 14px;
+        padding: 0.65rem;
+    }
+
+    .page-title {
+        font-size: 1.8rem;
+    }
+
+    .page-subtitle {
+        font-size: 1rem;
+    }
+
+    .step-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .command-list {
+        padding-left: 1rem;
+    }
+
+    /* Fix for input field overflow */
+    input[type="text"],
+    input[type="number"] {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}

@@ -11,7 +11,7 @@
         <h3>Telegram Connection</h3>
         <div class="settings-card">
             
-            <div class="settings-section">
+            <div class="">
                 {% if current_user.telegram_connected %}
                 <div class="connected-status">
                     <div class="status-icon connected"></div>
@@ -19,7 +19,7 @@
                 </div>
                 <div class="telegram-info">
                     <p><strong>Main Chat ID:</strong> {{ current_user.telegram_chat_ids['main'] }}</p>
-                    <p><strong>Additional Chat IDs:</strong> {{ current_user.telegram_chat_ids['additional'] }}</p>
+                    <p><strong>Additional Chat IDs:</strong> {{ current_user.telegram_chat_ids['additional']|join(', ') }}</p>
                 </div>
                 <a href="{{ url_for('telegram.connect') }}" class="secondary-link">Update Telegram Chat Ids</a>
                 {% else %}
@@ -35,7 +35,6 @@
         </div>
         
         <!-- Notification Settings -->
-        <div class="">
             <h3>Notification Preferences</h3>
         
                 <form method="POST" action="{{ url_for('settings.toggle_notification') }}">
@@ -65,6 +64,5 @@
                         <button type="submit" class="primary-button">Save Notification Settings</button>
                     </div>
                 </form>
-        </div>
 </div>
 {% endblock %}
