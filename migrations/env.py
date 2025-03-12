@@ -98,10 +98,14 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection,
-            target_metadata=get_metadata(),
-            **conf_args
-        )
+    connection=connection,
+    target_metadata=get_metadata(),
+    include_object=lambda _obj, name, type_, _reflected, _compare_to: (
+        type_ != 'table' or 
+        name != 'apscheduler_jobs'
+    ),
+    **conf_args
+)
 
         with context.begin_transaction():
             context.run_migrations()

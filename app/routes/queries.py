@@ -121,6 +121,8 @@ def create_query():
         print("Form check_interval:", form.check_interval.data)
         print("Submit button pressed:", 'submit' in request.form)
         print("Form submitted and validated")
+        print("Required keywords:", form.required_keywords.data)
+        print("Excluded keywords:", form.excluded_keywords.data)
         print("Form check_interval type:", type(form.check_interval.data))
         try:
             min_price = float(form.min_price.data) if form.min_price.data else None

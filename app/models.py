@@ -144,6 +144,15 @@ class LongTermItem(ItemBase):
         ),
     )
 
+
+class Feedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    feedback_type = db.Column(db.String(255))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    cancellation_reasons = db.Column(db.String(255))  # Comma-separated reasons
+    cancellation_comment = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 #**********************
 #HELPER FUNCTIONS
 #**********************

@@ -6,6 +6,7 @@ from app.forms import SubscriptionActionForm
 from flask_wtf.csrf import CSRFProtect
 from app.extensions import db
 from app.stripe.stripe_fulfillment import get_price_id_from_tier, get_tier_from_price
+from app.utils.feedback import save_cancellation_feedback
 
 csrf = CSRFProtect()
 bp = Blueprint('subscription', __name__, url_prefix='/subscription')
@@ -30,6 +31,7 @@ def handle_actions():
     if action == 'create_checkout_session':
         return create_checkout_session()
     if action == 'schedule_cancellation':
+        save_cancellation_feedback()
         return schedule_cancellation()
     if action == 'upgrade_subscription':
         return upgrade_subscription()

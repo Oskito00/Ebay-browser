@@ -231,6 +231,7 @@ class EbayAPI:
                 'value': float(item_data.get('currentBidPrice', {}).get('value', 0)),
                 'currency': item_data.get('currentBidPrice', {}).get('currency', self.currency)
             },
+            
             'end_time': item_data.get('itemEndDate'),
             'marketplace_id': item_data.get('listingMarketplaceId')
             } if is_auction else None

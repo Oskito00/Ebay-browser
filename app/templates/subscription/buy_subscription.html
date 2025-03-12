@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/buy-subscription.css') }}">
+
 {% endblock %}
 
 {% block content %}
@@ -83,7 +85,69 @@
         <form method="POST" action="{{ url_for('subscription.handle_actions') }}">
             {{ form.hidden_tag() }}
             <input type="hidden" name="tier" value="free">
-            <button type="submit" name="action" value="schedule_cancellation" class="btn btn-danger">Cancel Your Subscription</button>
+            
+            <!-- Changed button to trigger modal instead of direct submission -->
+            <button type="button" 
+                    class="btn btn-danger" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#cancellationModal">
+                Cancel Your Subscription
+            </button>
+    
+            <!-- Cancellation Feedback Modal -->
+            <div class="modal fade" id="cancellationModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">We're sorry to see you go</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Please help us improve by sharing your reason for cancelling:</p>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="cancellation_reason" 
+                                           value="too_expensive" id="reason1">
+                                    <label class="form-check-label" for="reason1">
+                                        Too expensive
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="cancellation_reason" 
+                                           value="missing_features" id="reason2">
+                                    <label class="form-check-label" for="reason2">
+                                        Missing features I need
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="cancellation_reason" 
+                                           value="not_using" id="reason3">
+                                    <label class="form-check-label" for="reason3">
+                                        Not using the service enough
+                                    </label>
+                                </div>
+                            </div>
+    
+                            <div class="mb-3">
+                                <label for="cancellationFeedback" class="form-label">
+                                    Additional comments/suggestions:
+                                </label>
+                                <textarea class="form-control" id="cancellationFeedback" 
+                                          name="cancellation_comment" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" 
+                                    data-bs-dismiss="modal">Close</button>
+                            <button type="submit" name="action" value="schedule_cancellation" 
+                                    class="btn btn-danger">
+                                Confirm Cancellation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
     {% elif current_user.cancellation_requested == True %}
@@ -97,4 +161,7 @@
     </div>
     {% endif %}
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 {% endblock %}
