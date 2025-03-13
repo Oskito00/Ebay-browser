@@ -34,11 +34,11 @@ def full_scrape_job(query_id):
             )
             app.logger.debug(f"[Job {query_id}] Found {len(items)} items")
             if query.first_run == True:
-                process_items(items, query, full_scan=True, notify=False)
+                process_items(items, query, full_scan=True, notify=False, first_run=True)
                 query.first_run = False
             else:
                 #It is not the first time the query has been run
-                process_items(items, query, full_scan=True, notify=True)
+                process_items(items, query, full_scan=True, notify=True, first_run=False)
                         
             query.last_full_run = datetime.now(timezone.utc)
             query.next_full_run = datetime.now(timezone.utc) + timedelta(hours=24)
@@ -76,7 +76,7 @@ def recent_scrape_job(query_id):
         except Exception as e:
             app.logger.error(f"Error: {e}")
 
-def process_items(items, query, check_existing=False, full_scan=False, notify=True):
+def process_items(items, query, check_existing=False, full_scan=False, notify=True, first_run=False):
     app = current_app._get_current_object()
     app.logger.debug(f"[Process Items] Starting processing for query {query.query_id}")
     app.logger.debug(f"[Process Items] Received {len(items)} items from scrape")
@@ -87,6 +87,9 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
     ending_auctions = []
     item_columns = {c.key for c in inspect(Item).mapper.column_attrs}
 
+    if first_run:
+        relevance_scores = []
+
     # Get the keyword once at the start
     keyword = query.keyword
     current_time = datetime.now(timezone.utc)
@@ -95,55 +98,101 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
         # Remove query-specific data from item
         item_data.pop('query_id', None)
         item_data.pop('keywords', None)
-        
-        # Find existing item globally (not per-query)
-        existing = Item.query.filter_by(ebay_id=item_data['ebay_id']).first()
 
-        relevance_score = calculate_relevance_score(query.keyword.keyword_text, item_data['title'])
-        app.logger.debug(f"[Process Items] Query: {query.keyword.keyword_text}")
-        app.logger.debug(f"[Process Items] Item: {item_data['title']}")
-        app.logger.debug(f"[Process Items] Relevance score for this item: {relevance_score:.2f}")
+        if first_run:
+            relevance_score = calculate_relevance_score(query.keyword.keyword_text, item_data['title'])
+            relevance_scores.append(relevance_score)
 
-        if existing:
-            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.item_id})")
-            # Check if item needs to be linked to keyword
-            if not KeywordItems.query.filter_by(keyword_id=keyword.keyword_id, item_id=existing.item_id).first():
-                app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to keyword {keyword.keyword_text}")
-                db.session.add(KeywordItems(keyword_id=keyword.keyword_id, item_id=existing.item_id))
-            # Check if the item is already linked to the query
-            elif not UserQueryItems.query.filter_by(query_id=query.query_id, item_id=existing.item_id).first():
-                app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to query {query.query_id}")
-                # If not add the link and include in new_items for notification
-                db.session.add(UserQueryItems(query_id=query.query_id, item_id=existing.item_id))
-                new_items.append(existing)
-        else:
-            # If we have never seen this item before, create a new global item
-            valid_data = {k: v for k, v in item_data.items() if k in item_columns}
-            new_item = Item(**valid_data)
-            db.session.add(new_item)
-            new_items.append(new_item)
-            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item created (eBay ID: {item_data['ebay_id']})")
+            # Find existing item globally (not per-query)
+            existing = Item.query.filter_by(ebay_id=item_data['ebay_id']).first()
+            if existing:
+                app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.item_id})")
+                # Check if item needs to be linked to keyword
+                if not KeywordItems.query.filter_by(keyword_id=keyword.keyword_id, item_id=existing.item_id).first():
+                    app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to keyword {keyword.keyword_text}")
+                    db.session.add(KeywordItems(keyword_id=keyword.keyword_id, item_id=existing.item_id))
+                # Check if the item is already linked to the query
+                if not UserQueryItems.query.filter_by(query_id=query.query_id, item_id=existing.item_id).first():
+                    app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to query {query.query_id}")
+                    # If not add the link and include in new_items for notification
+                    db.session.add(UserQueryItems(query_id=query.query_id, item_id=existing.item_id))
+                    new_items.append(existing)
+            else:
+                # If we have never seen this item before, create a new global item
+                valid_data = {k: v for k, v in item_data.items() if k in item_columns}
+                new_item = Item(**valid_data)
+                db.session.add(new_item)
+                new_items.append(new_item)
+                app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item created (eBay ID: {item_data['ebay_id']})")
 
-            # Flush to get the new item ID
-            db.session.flush()
+                # Flush to get the new item ID
+                db.session.flush()
             
-            # Link to keyword
-            db.session.add(KeywordItems(
+                # Link to keyword
+                db.session.add(KeywordItems(
                 keyword_id=keyword.keyword_id,
                 item_id=new_item.item_id,
                 found_at=current_time
-            ))
+                ))
 
-            # Link to user query
-            db.session.add(UserQueryItems(
+                # Link to user query
+                db.session.add(UserQueryItems(
                 query_id=query.query_id,
                 item_id=new_item.item_id,
                 auction_ending_notification_sent=False
-            ))
+                ))
             
-            db.session.commit()
+                db.session.commit()
+        
+        else:
+            # Calculate the relevance score for the new item
+            relevance_score = calculate_relevance_score(query.keyword.keyword_text, item_data['title'])
+            # Find existing item globally (not per-query)
+            existing = Item.query.filter_by(ebay_id=item_data['ebay_id']).first()
+            if existing:
+                app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.item_id})")
+                # Check if item needs to be linked to keyword
+                if not KeywordItems.query.filter_by(keyword_id=keyword.keyword_id, item_id=existing.item_id).first() and relevance_score > query.average_relevance_score - 0.15:
+                    app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to keyword {keyword.keyword_text}")
+                    db.session.add(KeywordItems(keyword_id=keyword.keyword_id, item_id=existing.item_id))
+                # Check if the item is already linked to the query
+                if not UserQueryItems.query.filter_by(query_id=query.query_id, item_id=existing.item_id).first() and relevance_score > query.average_relevance_score - 0.15:
+                    app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to query {query.query_id}")
+                    # If not add the link and include in new_items for notification
+                    db.session.add(UserQueryItems(query_id=query.query_id, item_id=existing.item_id))
+                    new_items.append(existing)
+            else:
+                # If we have never seen this item before, create a new global item
+                valid_data = {k: v for k, v in item_data.items() if k in item_columns}
+                new_item = Item(**valid_data)
+                db.session.add(new_item)
+                new_items.append(new_item)
+                app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item created (eBay ID: {item_data['ebay_id']})")
+
+                # Flush to get the new item ID
+                db.session.flush()
+            
+                # Link to keyword
+                if relevance_score > query.average_relevance_score - 0.15:  
+                    db.session.add(KeywordItems(
+                    keyword_id=keyword.keyword_id,
+                    item_id=new_item.item_id,
+                    found_at=current_time
+                    ))
+
+                # Link to user query
+                if relevance_score > query.average_relevance_score - 0.15:
+                    db.session.add(UserQueryItems(
+                    query_id=query.query_id,
+                    item_id=new_item.item_id,
+                    auction_ending_notification_sent=False
+                    ))
+            
+                db.session.commit()
+        
 
         # Update existing item if needed
+        print(existing)
         if existing:
             update_count = 0
             for key in item_columns - {'item_id', 'created_at'}:
@@ -180,6 +229,13 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
                 if user_query_item and not user_query_item.auction_ending_notification_sent:
                     ending_auctions.append(item)
                     user_query_item.auction_ending_notification_sent = True
+    
+    #Updates the average relevance score for the query (only on the first run)
+    if first_run:
+        UserQuery.query.filter_by(query_id=query.query_id).update({
+            'average_relevance_score': sum(relevance_scores) / len(relevance_scores)
+        })
+    app.logger.debug(f"[Process Items] Updated relevance average score for query {query.query_id} to {query.average_relevance_score}")
                 
 
     try:

@@ -1,29 +1,70 @@
 import re
+import unicodedata
 
 def preprocess_text(text: str) -> str:
     """
-    Normalizes text for comparison:
-    - Lowercases
-    - Removes punctuation
-    - Trims whitespace
+    Enhanced text normalization:
+    - Converts to ASCII (handles accented characters)
+    - Standardizes special characters
+    - Normalizes unicode variations
     """
+    # Convert to ASCII and normalize unicode
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    
+    # Standardize common characters
+    text = re.sub(r'[©®™]', '', text)  # Remove common trademark symbols
+    text = re.sub(r'&', ' and ', text)  # Replace ampersands
+    
+    # Handle special cases
+    text = re.sub(r"['']", '', text)    # Remove apostrophes
+    text = re.sub(r'[-_]', ' ', text)   # Treat hyphens/underscores as spaces
+    
+    # Normalize remaining characters
     text = text.lower()
-    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
-    text = re.sub(r'\s+', ' ', text).strip()  # Normalize whitespace
+    text = re.sub(r'[^\w\s]', '', text)  # Remove remaining punctuation
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Handle number normalization (e.g., "1st" -> "1 st")
+    text = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', text)
+    text = re.sub(r'([a-zA-Z]+)(\d+)', r'\1 \2', text)
+    
+    return text
+
+def normalize_special_terms(text: str) -> str:
+    """Handle common substitutions for better matching"""
+    substitutions = {
+        r'\biii\b': '3',
+        r'\bii\b': '2',
+        r'\biv\b': '4',
+        r'\bvs\b': 'versus',
+        r'\bft\b': 'feet',
+        r'\bpokemon\b': 'pokémon',  # Standardize spelling
+    }
+    
+    for pattern, replacement in substitutions.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
     return text
 
 def get_exact_match_score(query: str, item_text: str) -> float:
-    """
-    Calculates percentage of query words that exactly match item text
-    """
-    query_words = set(preprocess_text(query).split())
-    item_words = set(preprocess_text(item_text).split())
+    """Enhanced with term normalization"""
+    query = normalize_special_terms(preprocess_text(query))
+    item = normalize_special_terms(preprocess_text(item_text))
+    
+    query_words = set(query.split())
+    item_words = set(item.split())
     
     if not query_words:
         return 0.0
     
-    matches = query_words & item_words
-    return len(matches) / len(query_words)
+    # Allow partial matches for numbers
+    number_matches = sum(
+        1 for q in query_words if q.isdigit() and any(i.startswith(q) for i in item_words)
+    )
+    
+    exact_matches = len(query_words & item_words) + number_matches
+    return min(exact_matches / len(query_words), 1.0)
 
 def levenshtein_distance(s1: str, s2: str) -> int:
     """
@@ -49,18 +90,15 @@ def levenshtein_distance(s1: str, s2: str) -> int:
     return previous_row[-1]
 
 def normalized_levenshtein_similarity(query: str, item_text: str) -> float:
-    """
-    Returns similarity score between 0-1 based on edit distance,
-    normalized by input lengths
-    """
-    max_len = max(len(query), len(item_text))
+    """Enhanced with special character handling"""
+    processed_query = normalize_special_terms(preprocess_text(query))
+    processed_item = normalize_special_terms(preprocess_text(item_text))
+    
+    max_len = max(len(processed_query), len(processed_item))
     if max_len == 0:
         return 1.0
     
-    distance = levenshtein_distance(
-        preprocess_text(query),
-        preprocess_text(item_text)
-    )
+    distance = levenshtein_distance(processed_query, processed_item)
     return 1.0 - (distance / max_len)
 
 def has_negative_keywords(item_text: str, negative_terms: set) -> float:
@@ -75,13 +113,14 @@ def calculate_relevance_score(
     item_text: str,
 ) -> float:
     """
-    Combines all metrics into a final relevance score (0-1)
-    using the hybrid approach
+    Enhanced scoring with:
+    - 60% exact matches (with number handling)
+    - 40% normalized levenshtein
     """
     exact_score = get_exact_match_score(query, item_text)
     lev_score = normalized_levenshtein_similarity(query, item_text)
     
     return (
-        (exact_score * 0.5) +
-        (lev_score * 0.5)
+        (exact_score * 0.6) +
+        (lev_score * 0.4)
     )

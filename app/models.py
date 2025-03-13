@@ -109,6 +109,9 @@ class UserQuery(db.Model):
     buying_options = db.Column(db.String(255), index=True)
     first_run = db.Column(db.Boolean, default=True)
 
+    # Relevance average score
+    average_relevance_score = db.Column(db.Float, default=0.3)
+
 class Keyword(db.Model):
     __tablename__ = 'keywords'
     keyword_id = db.Column(db.Integer, primary_key=True)
