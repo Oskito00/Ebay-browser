@@ -1,6 +1,6 @@
 from decimal import Decimal, InvalidOperation
 from app import db
-from app.models import Query
+from app.models import UserQuery
 
 
 def calculate_daily_runs(check_interval):
@@ -9,10 +9,10 @@ def calculate_daily_runs(check_interval):
         raise ValueError("Check interval must be positive")
     return (24 * 60) // check_interval
 
-def update_user_usage(user, query, operation='add'):
+def update_user_usage(user, query_check_interval, operation='add'):
     """Update user's query usage when adding/removing/pausing queries"""
     try:
-        daily_runs = calculate_daily_runs(query.check_interval)
+        daily_runs = calculate_daily_runs(query_check_interval)
         
         if operation == 'add':
             new_usage = user.query_usage + daily_runs
@@ -39,7 +39,7 @@ def pause_queries_exceeding_limit(user):
     """Pause queries that would exceed the user's query limit"""
     
     print("Running pause_queries_exceeding_limit")
-    queries = Query.query.filter_by(user=user, is_active=True).order_by(Query.created_at.desc()).all()
+    queries = UserQuery.query.filter_by(user_id=user.id, is_active=True).order_by(UserQuery.created_at.desc()).all()
     print(f"Active queries for user {user.id}: {queries}")
     paused_queries = []
     print(f"User query usage: {user.query_usage}")

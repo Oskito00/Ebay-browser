@@ -132,10 +132,16 @@
                     {% endif %}
                 </div>
                 {% endif %}
-                
-                
+                {% if form.marketplace %}
+                <div class="form-group">
+                    {{ form.marketplace.label }}
+                    {{ form.marketplace(class="form-control") }}
+                    {% if form.marketplace.errors %}
+                        <div class="errors">{% for error in form.marketplace.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+                {% endif %} 
             </div>
-            
         </div>
 
         <div class="checkbox-group">

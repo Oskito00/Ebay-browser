@@ -19,13 +19,13 @@
         {% endif %}
     {% endwith %}
 
-    <form method="POST" action="{{ url_for('queries.edit_query', query_id=query.id) }}">
+    <form method="POST" action="{{ url_for('queries.edit_query', query_id=query.query_id) }}">
         {{ form.csrf_token }}
         
         <div class="primary-fields">
             <div class="form-group">
                 {{ form.keywords.label }}
-                {{ form.keywords(class="form-control") }}
+                {{ form.keywords(class="form-control", readonly=True) }}
                 {% if form.keywords.errors %}
                     <div class="errors">{% for error in form.keywords.errors %}{{ error }}{% endfor %}</div>
                 {% endif %}
@@ -133,11 +133,21 @@
                     {% endif %}
                 </div>
                 {% endif %}
-                
-                
+
+                {% if form.marketplace %}
+                <div class="form-group">
+                    {{ form.marketplace.label }}
+                    {{ form.marketplace(class="form-control") }}
+                    {% if form.marketplace.errors %}
+                        <div class="errors">{% for error in form.marketplace.errors %}{{ error }}{% endfor %}</div>
+                    {% endif %}
+                </div>
                 {% endif %}
             </div>
+            {% endif %}
+
         </div>
+
 
         <div class="checkbox-group">
 

@@ -1,10 +1,10 @@
 from datetime import datetime
 from .core import scheduler
-from app.models import Query
+from app.models import UserQuery
 from app import db
 
 def add_query_jobs(query_id):
-    query = Query.query.get(query_id)
+    query = UserQuery.query.get(query_id)
 
     # Full job - runs immediately and every 24h
     scheduler.add_job(

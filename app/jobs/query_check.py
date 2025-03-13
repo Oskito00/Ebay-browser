@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
-import time
 from app import db, scheduler
-from app.models import Query, Item
+from app.models import Item, Keyword, KeywordItems, User, UserQuery, UserQueryItems
+from app.utils.levenshtein_string_similarity_helper import calculate_relevance_score
 from app.utils.notifications import NotificationManager
 from app.utils.scraper import scrape_ebay, scrape_new_items
 from flask import current_app
@@ -9,55 +9,40 @@ from sqlalchemy import inspect
 from app.scheduler.core import scheduler  # Import the instance
 from app.scheduler.job_manager import add_query_jobs, remove_query_jobs
 
-
-
 def full_scrape_job(query_id):
     app = current_app._get_current_object() if current_app else scheduler.flask_app
     app.logger.debug(f"[Job {query_id}] Starting full scrape")
-    
     with app.app_context():
-        app.logger.debug(f"[Job {query_id}] App context entered")
-        
         session = db.session()
-        app.logger.debug(f"[Job {query_id}] Session created: {id(session)}")
-        
         try:
             with session.begin():
                 # Get and check query
-                query = session.query(Query).get(query_id)
-                app.logger.debug(f"[Job {query_id}] Query status: {'Active' if query and query.is_active else 'Inactive/Missing'}")
+                query = UserQuery.query.get(query_id)
                 
                 if not query or not query.is_active:
                     app.logger.debug(f"[Job {query_id}] Aborting - no active query")
                     return
-
-            # Scraping (outside transaction)
-            app.logger.debug(f"[Job {query_id}] Scraping eBay...")
+            # Get the kewords based on the query keyword_id
+            keywords = Keyword.query.get(query.keyword_id)
+            # Call scrape ebay with the right filters
             items = scrape_ebay(
-                query.keywords,
+                keywords.keyword_text,
                 filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
                 required_keywords=query.required_keywords,
                 excluded_keywords=query.excluded_keywords,
                 marketplace=query.marketplace
             )
             app.logger.debug(f"[Job {query_id}] Found {len(items)} items")
-            if query.needs_scheduling == True:
-                #It is the first time the query has been run
+            if query.first_run == True:
                 process_items(items, query, full_scan=True, notify=False)
+                query.first_run = False
             else:
                 #It is not the first time the query has been run
                 process_items(items, query, full_scan=True, notify=True)
-            app.logger.debug(f"[Job {query_id}] Processed {len(items)} items")
-
-            # Update timestamps in same session
-            
-            app.logger.debug(f"[Job {query_id}] Updating query fields")
-            
+                        
             query.last_full_run = datetime.now(timezone.utc)
             query.next_full_run = datetime.now(timezone.utc) + timedelta(hours=24)
-            query.needs_scheduling = False
             db.session.commit()
-            app.logger.debug(f"[Job {query_id}] Query fields updated")
         except Exception as e:
             app.logger.error(f"[Job {query_id}] Error: {str(e)}", exc_info=True)
         finally:
@@ -67,30 +52,25 @@ def full_scrape_job(query_id):
 
 def recent_scrape_job(query_id):
     app = current_app._get_current_object() if current_app else scheduler.flask_app
-    
     with app.app_context():
         try:
             session = db.session
-            
             with session.begin():
-                # Correct query method
-                query = session.query(Query).get(query_id)
+                query = UserQuery.query.get(query_id)
                 if not query or not query.is_active:
                     return
-
             try:
+                keywords = Keyword.query.get(query.keyword_id)
                 new_items = scrape_new_items(
-                    query.keywords,
+                    keywords.keyword_text,
                     filters={'min_price': query.min_price, 'max_price': query.max_price, 'item_location': query.item_location,'condition': query.condition},
                     required_keywords=query.required_keywords,
                     excluded_keywords=query.excluded_keywords,
                     marketplace=query.marketplace
                 )
                 process_items(new_items, query, check_existing=False, notify=True)
-
                 query.last_recent_run = datetime.now(timezone.utc)
                 db.session.commit()
-                
             except Exception as e:
                 app.logger.error(f"Recent scrape failed: {e}")
         except Exception as e:
@@ -98,7 +78,7 @@ def recent_scrape_job(query_id):
 
 def process_items(items, query, check_existing=False, full_scan=False, notify=True):
     app = current_app._get_current_object()
-    app.logger.debug(f"[Process Items] Starting processing for query {query.id}")
+    app.logger.debug(f"[Process Items] Starting processing for query {query.query_id}")
     app.logger.debug(f"[Process Items] Received {len(items)} items from scrape")
 
     new_items = []
@@ -107,104 +87,127 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
     ending_auctions = []
     item_columns = {c.key for c in inspect(Item).mapper.column_attrs}
 
-    new_items_count = 0
-    existing_items_count = 0
-    price_change_count = 0
+    # Get the keyword once at the start
+    keyword = query.keyword
+    current_time = datetime.now(timezone.utc)
 
     for idx, item_data in enumerate(items):
-        # Add query context
-        item_data.update({
-            'query_id': query.id,
-            'keywords': query.keywords,
-            'last_updated': datetime.now(timezone.utc)
-        })
+        # Remove query-specific data from item
+        item_data.pop('query_id', None)
+        item_data.pop('keywords', None)
         
-        # Find existing item
-        existing = Item.query.filter(
-            (Item.ebay_id == item_data['ebay_id']) &
-            (Item.query_id == query.id)
-        ).first()
+        # Find existing item globally (not per-query)
+        existing = Item.query.filter_by(ebay_id=item_data['ebay_id']).first()
+
+        relevance_score = calculate_relevance_score(query.keyword.keyword_text, item_data['title'])
+        app.logger.debug(f"[Process Items] Query: {query.keyword.keyword_text}")
+        app.logger.debug(f"[Process Items] Item: {item_data['title']}")
+        app.logger.debug(f"[Process Items] Relevance score for this item: {relevance_score:.2f}")
 
         if existing:
-            existing_items_count += 1
-            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.id})")
+            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: Existing item found (ID: {existing.item_id})")
+            # Check if item needs to be linked to keyword
+            if not KeywordItems.query.filter_by(keyword_id=keyword.keyword_id, item_id=existing.item_id).first():
+                app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to keyword {keyword.keyword_text}")
+                db.session.add(KeywordItems(keyword_id=keyword.keyword_id, item_id=existing.item_id))
+            # Check if the item is already linked to the query
+            elif not UserQueryItems.query.filter_by(query_id=query.query_id, item_id=existing.item_id).first():
+                app.logger.debug(f"[Process Items] Linking existing item {existing.item_id} to query {query.query_id}")
+                # If not add the link and include in new_items for notification
+                db.session.add(UserQueryItems(query_id=query.query_id, item_id=existing.item_id))
+                new_items.append(existing)
         else:
-            new_items_count += 1
-            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item detected (eBay ID: {item_data['ebay_id']})")
-
-        # Track price changes
-        old_price = existing.price if existing else None
-        new_price = item_data.get('price')
-
-        if existing:
-            # Update existing item
-            update_count = 0
-            for key in item_columns - {'id', 'query_id'}:
-                if key in item_data and getattr(existing, key) != item_data[key]:
-                    update_count += 1
-                    setattr(existing, key, item_data[key])
-            if update_count > 0:
-                app.logger.debug(f"[Process Items] Updated {update_count} fields for item {existing.id}")
-            updated_items.append(existing)
-        else:
-            # Create new item
+            # If we have never seen this item before, create a new global item
             valid_data = {k: v for k, v in item_data.items() if k in item_columns}
             new_item = Item(**valid_data)
             db.session.add(new_item)
             new_items.append(new_item)
+            app.logger.debug(f"[Process Items] Item {idx+1}/{len(items)}: New item created (eBay ID: {item_data['ebay_id']})")
 
-        # Price drop check
-        if full_scan and existing and old_price is not None:
-            if new_price < old_price and (query.max_price is None or new_price <= query.max_price):
-                price_change_count += 1
-                app.logger.debug(f"[Process Items] Price drop detected: {old_price} -> {new_price} (Item {existing.id})")
+            # Flush to get the new item ID
+            db.session.flush()
+            
+            # Link to keyword
+            db.session.add(KeywordItems(
+                keyword_id=keyword.keyword_id,
+                item_id=new_item.item_id,
+                found_at=current_time
+            ))
 
-        # Auction ending detection
+            # Link to user query
+            db.session.add(UserQueryItems(
+                query_id=query.query_id,
+                item_id=new_item.item_id,
+                auction_ending_notification_sent=False
+            ))
+            
+            db.session.commit()
+
+        # Update existing item if needed
+        if existing:
+            update_count = 0
+            for key in item_columns - {'item_id', 'created_at'}:
+                if key in item_data and getattr(existing, key) != item_data[key]:
+                    update_count += 1
+                    setattr(existing, key, item_data[key])
+                    existing.last_updated = current_time
+            if update_count > 0:
+                updated_items.append(existing)
+                app.logger.debug(f"[Process Items] Updated {update_count} fields for item {existing.item_id}")
+
+        # Track price changes (using first query that found the item)
+        if full_scan and existing:
+            old_price = existing.price
+            new_price = item_data.get('price')
+            if new_price and old_price and new_price < old_price:
+                price_drops.append({
+                    'item': existing,
+                    'old_price': old_price,
+                    'new_price': new_price
+                })
+
+        # Auction ending detection (now global)
         end_time = item_data.get('end_time')
-        print("DEBUG - [Process Items]: end_time", end_time)
-        print("DEBUG - [Process Items]: datetime.now(timezone.utc)", datetime.now(timezone.utc))
-        if end_time:    
+        if end_time:
             end_time = end_time.replace(tzinfo=timezone.utc)
-            if end_time and (end_time - datetime.now(timezone.utc)) < timedelta(hours=12):
-                ending_auctions.append(existing)
-            app.logger.debug(f"[Process Items] Auction ending soon: {end_time} (Item {existing.id if existing else 'new'})")
+            if (end_time - current_time) < timedelta(hours=12):
+                item = existing or new_item
+                user_query_item = UserQueryItems.query.filter_by(
+                    query_id=query.query_id,
+                    item_id=item.item_id
+                ).first()
+                
+                if user_query_item and not user_query_item.auction_ending_notification_sent:
+                    ending_auctions.append(item)
+                    user_query_item.auction_ending_notification_sent = True
+                
 
     try:
-        app.logger.debug(f"[Process Items] Committing changes to database")
-        app.logger.debug(f"[Process Items] New items: {new_items_count}, Updated items: {len(updated_items)}")
-        
         db.session.commit()
-        
         app.logger.debug(f"[Process Items] Commit successful")
-        app.logger.debug(f"[Process Items] Total price drops detected: {price_change_count}")
-        app.logger.debug(f"[Process Items] Auctions ending soon: {len(ending_auctions)}")
-
-        user = query.user
-        prefs = user.notification_preferences
+        app.logger.debug(f"[Process Items] New items: {len(new_items)}, Updated items: {len(updated_items)}")
+        app.logger.debug(f"[Process Items] Price drops: {len(price_drops)}, Ending auctions: {len(ending_auctions)}")
 
         if notify:
-            app.logger.debug(f"[Process Items] Sending notifications (prefs: {prefs})")
+            # Notify only for this query's user
+            user = User.query.get(query.user_id)
+            prefs = user.notification_preferences
+            notification_counts = {'new_items': 0, 'price_drops': 0, 'auction_alerts': 0}
             
-            notification_counts = {
-                'new_items': 0,
-                'price_drops': 0,
-                'auction_alerts': 0
-            }
+            if new_items:
+                if new_items and prefs.get('new_items', True):
+                    notification_counts['new_items'] = len(new_items)
+                    NotificationManager.send_item_notification(user, new_items, query.keyword.keyword_text)
 
-            if new_items and prefs.get('new_items', True):
-                notification_counts['new_items'] = len(new_items)
-                print("DEBUG Process Items: Sending new item notification")
-                NotificationManager.send_item_notification(user, new_items)
-            
-            if price_drops and prefs.get('price_drops', True):
-                notification_counts['price_drops'] = len(price_drops)
-                print("DEBUG Process Items: Sending price drop notification")
-                NotificationManager.send_price_drops(user, price_drops)
-            
-            if ending_auctions and prefs.get('auction_alerts', True):
-                notification_counts['auction_alerts'] = len(ending_auctions)
-                print("DEBUG Process Items: Sending auction alert notification")
-                NotificationManager.send_auction_alerts(user, ending_auctions)
+            if price_drops:
+                if price_drops and prefs.get('price_drops', True):
+                    notification_counts['price_drops'] = len(price_drops)
+                    NotificationManager.send_price_drops(user, price_drops, query.keyword.keyword_text)
+
+            if ending_auctions:
+                if ending_auctions and prefs.get('auction_alerts', True):
+                    notification_counts['auction_alerts'] = len(ending_auctions)
+                    NotificationManager.send_auction_alerts(user, ending_auctions, query.keyword.keyword_text)
 
             app.logger.debug(f"[Process Items] Notifications sent: {notification_counts}")
 
@@ -216,11 +219,13 @@ def process_items(items, query, check_existing=False, full_scan=False, notify=Tr
         raise
 
 
+# Check queries job
+
 def check_queries():
     app = scheduler.flask_app
     with app.app_context():
         # Get active query UUIDs
-        active = {str(q.id) for q in Query.query.filter_by(is_active=True).all()}
+        active = {str(q.query_id) for q in UserQuery.query.filter_by(is_active=True).all()}
         
         # Get scheduled UUIDs from job IDs
         scheduled = set()
@@ -238,3 +243,8 @@ def check_queries():
         # Remove deleted jobs
         for qid in scheduled - active:
             remove_query_jobs(qid)
+
+
+# ***********************
+# HELPER FUNCTIONS
+# ***********************

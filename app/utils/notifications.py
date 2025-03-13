@@ -34,7 +34,7 @@ class TelegramNotifier:
 
 class NotificationManager:
     @staticmethod
-    def send_item_notification(user, items, query=None):
+    def send_item_notification(user, items, query_text=None):
         # Check preferences and connection
         if (not user.telegram_connected or 
             not user.notification_preferences.get('new_items', True) or
@@ -50,14 +50,14 @@ class NotificationManager:
                 )
             
                 # Improved message formatting
-                query_text = f" for '{query.keywords}'" if query else ""
+                query_text = f" for your '{query_text}' search" if query_text else ""
                 message = (
                 f"🎉 <b>New Items Found{query_text}!</b>\n\n"
                 f"📥 Total new items: {len(items)}\n\n"
             )
             
-                # Add top 3 items
-                for item in items[:3]:
+                # Add top 5 items
+                for item in items[:5]:
                     message += (
                     f"🏷️ <a href='{item.url}'>{item.title}</a>\n"
                     f"💰 Price: {item.price} {item.currency}\n"
@@ -65,8 +65,6 @@ class NotificationManager:
                 )
             
                 # Add view more link
-                if query:
-                    message += f"🔍 <a href='{current_app.config['APP_URL']}/query/{query.id}'>View all items</a>"
                 notifier.send_message(message)
             return True
         except Exception as e:
@@ -93,16 +91,17 @@ class NotificationManager:
     
     
     @staticmethod
-    def send_price_drops(user, drops):
+    def send_price_drops(user, drops, query_text=None):
         chat_ids = [user.telegram_chat_ids['main']] + user.telegram_chat_ids['additional']
         for chat_id in chat_ids:
             notifier = TelegramNotifier(
                 current_app.config['TELEGRAM_BOT_TOKEN'],
                 chat_id
             )
+            query_text = f" for '{query_text}'" if query_text else ""
             for drop in drops:
                 message = (
-                "🛎️ **Price Alert**\n"
+                f"🛎️ **Price Alert{query_text}**\n"
                 f"📦 Item: {drop['item'].title}\n"
                 f"💰 Price dropped from £{drop['old_price']} → £{drop['new_price']}\n"
                 f"🔗 [View Item]({drop['item'].url})"
@@ -112,13 +111,14 @@ class NotificationManager:
                 
     
     @staticmethod
-    def send_auction_alerts(user, items):
+    def send_auction_alerts(user, items, query_text=None):
         chat_ids = [user.telegram_chat_ids['main']] + user.telegram_chat_ids['additional']
         for chat_id in chat_ids:
             notifier = TelegramNotifier(
             current_app.config['TELEGRAM_BOT_TOKEN'],
             chat_id
             )
+            query_text = f" for '{query_text}'" if query_text else ""
             for item in items:
                 if item.auction_details['current_bid']['value']:
                     current_bid = item.auction_details['current_bid']['value']
@@ -130,7 +130,7 @@ class NotificationManager:
                     hours_left = round(time_left.total_seconds() / 3600, 1)
 
                     message = (
-                "⏳ **Auction Ending Soon**\n"
+                f"⏳ **Auction Ending Soon{query_text}**\n"
                 f"📦 Item: {item.title}\n"
                 f"💰 Current Price: £{current_bid}\n"
                 f"⏰ Ends in: {hours_left} hours\n"

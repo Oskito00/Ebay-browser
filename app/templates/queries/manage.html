@@ -8,15 +8,24 @@
 <main class="manage-page">
     <div class="container">
         <div class="manage-header">
-            <h1>Your Searches</h1>
+            <h1>Searches</h1>
+            <p>Hi, {{ current_user.email }}</p>
             <p class="subtitle">Track prices for items that matter to you</p>
+            
             
             <div class="manage-actions">
                 <a href="{{ url_for('queries.create_query') }}" class="add-button">
                     <i class="fa-solid fa-plus"></i> Add New Search
                 </a>
             </div>
+            <form method="POST" action="{{ url_for('queries.toggle_all_queries') }}" style="display: inline-block;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="button {% if all_paused %}btn-resume{% else %}btn-pause{% endif %}">
+                    {{ 'Resume All' if all_paused else 'Pause All' }}
+                </button>
+            </form>
         </div>
+
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -40,9 +49,9 @@
             {% for query in queries %}
             <div class="query-list-item {% if query.is_active %}active{% else %}paused{% endif %}">
                 <div class="query-term">
-                    <h3>{{ query.keywords }}</h3>
-                    {% if query.last_checked %}
-                    <span class="last-checked">Last checked: {{ query.last_checked.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <h3>{{ query.keyword.keyword_text }}</h3>
+                    {% if query.last_recent_run %}
+                    <span class="last-checked">Last checked: {{ query.last_recent_run.strftime('%Y-%m-%d %H:%M') }}</span>
                     {% endif %}
                 </div>
                 
@@ -67,7 +76,7 @@
                 </div>
                 
                 <div class="query-actions">
-                    <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.id) }}" class="toggle-form">
+                    <form method="POST" action="{{ url_for('queries.toggle_query', query_id=query.query_id) }}" class="toggle-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="action-button toggle">
                             {% if query.is_active %}
@@ -78,11 +87,11 @@
                         </button>
                     </form>
                     
-                    <a href="{{ url_for('queries.edit_query', query_id=query.id) }}" class="action-button edit" title="Edit">
+                    <a href="{{ url_for('queries.edit_query', query_id=query.query_id) }}" class="action-button edit" title="Edit">
                         <i class="fa-solid fa-pen"></i>
                     </a>
                     
-                    <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.id) }}" onsubmit="return confirm('Are you sure you want to delete this search?');" class="delete-form">
+                    <form method="POST" action="{{ url_for('queries.delete_query', query_id=query.query_id) }}" onsubmit="return confirm('Are you sure you want to delete this search?');" class="delete-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="action-button delete" title="Delete">
                             <i class="fa-solid fa-trash"></i>
