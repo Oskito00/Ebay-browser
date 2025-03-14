@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/details.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="query-details-container">
+    <h1>{{ query.keyword.keyword_text }}</h1>
+    
+    <div class="stats-card">
+        <div class="stat-item">
+            <span class="stat-value">{{ stats.total_items }}</span>
+            <span class="stat-label">Total Items</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">£{{ "%.2f"|format(stats.avg_price) }}</span>
+            <span class="stat-label">Average Price</span>
+        </div>
+    </div>
+
+    <div class="items-list">
+        {% if items|length > 0 %}
+            <div class="results-count">
+                Showing {{ items|length }} of {{ stats.total_items }} items
+            </div>
+            {% for item in items %}
+            <div id="item-{{ item.item_id }}" class="item-container">
+                <div class="item-card {% if item.user_feedback %}feedback-{{ item.user_feedback }}{% endif %}">
+                    <img src="{{ item.item.image_url }}" alt="Item image" class="item-image">
+                    <div class="item-details">
+                        <h3>{{ item.item.title }}</h3>
+                        <p class="price">£{{ item.item.price }}</p>
+                        
+                        <div class="feedback-buttons">
+                            <form action="{{ url_for('queries.submit_feedback', query_id=query.query_id, item_id=item.item_id) }}#item-{{ item.item_id }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                
+                                <button type="submit" name="feedback" value="relevant" class="feedback-btn relevant">
+                                    <span class="sr-only">Relevant</span>
+                                </button>
+                                <button type="submit" name="feedback" value="irrelevant" class="feedback-btn irrelevant">
+                                    <span class="sr-only">Irrelevant</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-items">No items found for this query</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

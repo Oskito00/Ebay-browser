@@ -78,7 +78,14 @@ class UserQueryItems(db.Model):
     __tablename__ = 'user_query_items'
     query_id = db.Column(String(36), db.ForeignKey('user_queries.query_id'), primary_key=True, nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('items.item_id'), primary_key=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     auction_ending_notification_sent = db.Column(db.Boolean, default=False)
+
+    #Relationship to UserQuery
+    user_query = db.relationship('UserQuery', backref='user_query_items', lazy='joined')
+
+    #Relationship to Item
+    item = db.relationship('Item', backref='query_associations', lazy='joined')
 
 class UserQuery(db.Model):
     __tablename__ = 'user_queries'
@@ -88,7 +95,7 @@ class UserQuery(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     keyword_id = db.Column(db.Integer, db.ForeignKey('keywords.keyword_id'), nullable=False)
     keyword = db.relationship('Keyword', backref='user_queries')
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
 
     # Scheduling/operational
@@ -129,10 +136,15 @@ class ItemRelevanceFeedback(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('items.item_id'), nullable=False)
     keyword_id = db.Column(db.Integer, db.ForeignKey('keywords.keyword_id'), nullable=False)
-    is_relevant = db.Column(db.Boolean, nullable=False)  # True/False for user feedback
+    is_relevant = db.Column(db.Boolean, nullable=True)  # True/False for user feedback
     simple_hybrid_levenshtein_confidence = db.Column(db.Float)  # Optional: Hybrid confidence score
     cosine_similarity = db.Column(db.Float)  # Optional: Cosine similarity score
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'item_id', 'keyword_id', 
+                          name='uq_user_item_keyword_feedback'),
+    )
 
 class Feedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)

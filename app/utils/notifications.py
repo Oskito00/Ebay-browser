@@ -63,6 +63,8 @@ class NotificationManager:
                     f"💰 Price: {item.price} {item.currency}\n"
                     f"📍 Location: {item.location_country or 'N/A'}\n\n"
                 )
+                    
+                
             
                 # Add view more link
                 notifier.send_message(message)

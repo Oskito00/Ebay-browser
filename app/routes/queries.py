@@ -1,16 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, abort
+from flask import Blueprint, jsonify, render_template, redirect, url_for, request, flash, abort
 from flask_login import login_required, current_user
-from app.models import Keyword, KeywordItems, UserQuery, UserQueryItems, db, Item, copy_item
+from sqlalchemy import func
+from app.models import ItemRelevanceFeedback, Keyword, KeywordItems, UserQuery, UserQueryItems, db, Item, copy_item
 from app.forms import QueryForm, DeleteForm  # Create this form if needed
-from sqlalchemy import exists
-from sqlalchemy.exc import OperationalError
 from flask import current_app
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from apscheduler.jobstores.base import JobLookupError
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timezone
-from app.utils.text_helpers import filter_items_by_keywords, filter_items_by_price
 from app.utils.query_helpers import update_user_usage
 
 bp = Blueprint('queries', __name__, url_prefix='/queries')
@@ -186,6 +180,7 @@ def create_query():
 @bp.route('/queries/toggle_all', methods=['POST'])
 @login_required
 def toggle_all_queries():
+    print("Toggling all queries")
     new_state = not UserQuery.query.filter_by(user_id=current_user.id, is_active=True).count() > 0
     for query in UserQuery.query.filter_by(user_id=current_user.id).all():
         if query.is_active != new_state:
@@ -218,3 +213,68 @@ def toggle_query(query_id):
     
     return redirect(url_for('queries.manage_queries'))
 
+
+@bp.route('/<string:query_id>')
+@login_required
+def query_details(query_id):
+    query = UserQuery.query.filter_by(user_id=current_user.id, query_id=query_id).first_or_404()
+    
+    # Get ALL items for accurate stats
+    all_items = UserQueryItems.query\
+                         .filter_by(query_id=query_id)\
+                         .order_by(UserQueryItems.created_at.desc())\
+                         .all()
+    
+    # Calculate stats using all items
+    stats = {
+        'total_items': len(all_items),
+        'avg_price': sum(item.item.price for item in all_items if item.item.price) / len(all_items) if all_items else 0
+    }
+    
+    # Only show first 100 items
+    visible_items = all_items[:100]
+
+    return render_template('queries/details.html', 
+                         query=query, 
+                         items=visible_items,
+                         stats=stats,
+                         )
+
+@bp.route('/feedback/<string:query_id>/<int:item_id>', methods=['POST'])
+@login_required
+def submit_feedback(query_id, item_id):
+    user_query_item = UserQueryItems.query.get_or_404((query_id, item_id))
+    
+    if user_query_item.user_query.user_id != current_user.id:
+        abort(403)
+    
+    feedback = request.form.get('feedback')
+    if feedback not in ['relevant', 'irrelevant']:
+        abort(400)
+    
+    # Handle feedback recording
+    feedback_entry = ItemRelevanceFeedback.query.filter_by(
+        user_id=current_user.id,
+        item_id=user_query_item.item_id,
+        keyword_id=user_query_item.user_query.keyword_id
+    ).first()
+
+    if feedback_entry:
+        feedback_entry.is_relevant = (feedback == 'relevant')
+    else:
+        feedback_entry = ItemRelevanceFeedback(
+            user_id=current_user.id,
+            item_id=user_query_item.item_id,
+            keyword_id=user_query_item.user_query.keyword_id,
+            is_relevant=(feedback == 'relevant'),
+            created_at=datetime.utcnow()
+        )
+        db.session.add(feedback_entry)
+
+    # Remove from user's view if marked irrelevant
+    if feedback == 'irrelevant':
+        print("Removing from user's view")
+        db.session.delete(user_query_item)  # Remove the query-item link
+
+    db.session.commit()
+    return redirect(url_for('queries.query_details', query_id=query_id) + f"#item-{item_id}")

@@ -1,17 +1,8 @@
-import logging
-import os
-from re import match
 import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from app.ebay.api import EbayAPI
-from app.ebay.constants import MARKETPLACE_IDS
-from app.models import Query, Item
-from app import db
-import requests_mock
-import json
-from app import create_app
-from requests.exceptions import HTTPError
+
+
 
 @pytest.fixture
 def ebay_api():
@@ -242,6 +233,15 @@ def test_custom_search_query(app):
             price = item.get('price')
             assert price is not None, "Item missing price"
             assert 90 <= price <= 500, f"Price {price} out of range (100-500)"
+
+@pytest.mark.live
+def test_raw_api_call(app):
+    with app.app_context():
+        api = EbayAPI()
+        raw_response = api.raw_search("iphone")
+        print(raw_response)
+
+
 
 #***********************
 #Rate Limit Tests
